@@ -1,4 +1,4 @@
-package com.nexapay.promotion.config;
+package com.nexapay.promotion.common.config;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;

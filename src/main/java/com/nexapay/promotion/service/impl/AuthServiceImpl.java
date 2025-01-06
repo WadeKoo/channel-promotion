@@ -10,14 +10,17 @@ import com.nexapay.promotion.entity.VerificationCode;
 import com.nexapay.promotion.mapper.UserMapper;
 import com.nexapay.promotion.mapper.VerificationCodeMapper;
 import com.nexapay.promotion.service.AuthService;
+import com.nexapay.promotion.service.EmailService;
 import com.nexapay.promotion.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.Random;
+import java.util.concurrent.TimeUnit;
 
 @Service
 @RequiredArgsConstructor
@@ -27,30 +30,37 @@ public class AuthServiceImpl implements AuthService {
     private final VerificationCodeMapper verificationCodeMapper;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
+    private final EmailService emailService;
+
+    private final RedisTemplate<String, Object> redisTemplate;
+    private static final String VERIFICATION_CODE_KEY_PREFIX = "verification_code:";
+    private static final long VERIFICATION_CODE_EXPIRE_TIME = 5; // 5分钟过期
+
+    @Override
+    public R sendVerificationCode(SendVerificationCodeDTO dto) {
+        String code = String.format("%06d", new Random().nextInt(1000000));
+        String key = VERIFICATION_CODE_KEY_PREFIX + dto.getEmail();
+
+        redisTemplate.opsForValue().set(key, code, VERIFICATION_CODE_EXPIRE_TIME, TimeUnit.MINUTES);
+        emailService.sendVerificationCode(dto.getEmail(), code);
+
+        return R.success("验证码已发送");
+    }
 
     @Override
     @Transactional
     public R register(RegisterDTO registerDTO) {
-        // 验证邮箱是否已注册
-        User existingUser = userMapper.selectOne(
-                new LambdaQueryWrapper<User>()
-                        .eq(User::getEmail, registerDTO.getEmail())
-        );
+        String key = VERIFICATION_CODE_KEY_PREFIX + registerDTO.getEmail();
+        String storedCode = (String) redisTemplate.opsForValue().get(key);
 
-        if (existingUser != null) {
-            return R.error("邮箱已被注册");
+        if (storedCode == null || !storedCode.equals(registerDTO.getVerificationCode())) {
+            return R.error("验证码无效或已过期");
         }
 
-        // 验证验证码
-        VerificationCode code = verificationCodeMapper.selectOne(
-                new LambdaQueryWrapper<VerificationCode>()
-                        .eq(VerificationCode::getEmail, registerDTO.getEmail())
-                        .eq(VerificationCode::getCode, registerDTO.getVerificationCode())
-                        .eq(VerificationCode::getUsed, false)
-        );
-
-        if (code == null || code.getExpireTime().isBefore(LocalDateTime.now())) {
-            return R.error("验证码无效或已过期");
+        // 验证邮箱
+        if (userMapper.selectOne(new LambdaQueryWrapper<User>()
+                .eq(User::getEmail, registerDTO.getEmail())) != null) {
+            return R.error("邮箱已被注册");
         }
 
         // 创建用户
@@ -62,12 +72,9 @@ public class AuthServiceImpl implements AuthService {
         user.setUpdateTime(LocalDateTime.now());
 
         userMapper.insert(user);
+        redisTemplate.delete(key);
 
-        // 标记验证码已使用
-        code.setUsed(true);
-        verificationCodeMapper.updateById(code);
-
-        return R.success("注册成功");
+        return R.success(jwtUtil.generateToken(user));
     }
 
     @Override
@@ -95,24 +102,5 @@ public class AuthServiceImpl implements AuthService {
         return R.success(token);
     }
 
-    @Override
-    public R sendVerificationCode(SendVerificationCodeDTO dto) {
-        // 生成6位随机验证码
-        String code = String.format("%06d", new Random().nextInt(1000000));
 
-        // 保存验证码
-        VerificationCode verificationCode = new VerificationCode();
-        verificationCode.setEmail(dto.getEmail());
-        verificationCode.setCode(code);
-        verificationCode.setExpireTime(LocalDateTime.now().plusMinutes(5));
-        verificationCode.setUsed(false);
-        verificationCode.setCreateTime(LocalDateTime.now());
-
-        verificationCodeMapper.insert(verificationCode);
-
-        // TODO: 发送邮件
-        // 这里需要添加邮件发送的实现
-        // 为了测试方便，先直接返回验证码
-        return R.success(code);
-    }
 }

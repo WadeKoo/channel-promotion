@@ -1,4 +1,4 @@
-package com.nexapay.promotion.config;
+package com.nexapay.promotion.common.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nexapay.promotion.common.R;

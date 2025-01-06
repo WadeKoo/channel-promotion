@@ -26,8 +26,10 @@ public class AuthController {
         return authService.login(loginDTO);
     }
 
-    @PostMapping("/send-code")
-    public R sendVerificationCode(@Validated @RequestBody SendVerificationCodeDTO dto) {
+    @GetMapping("/send-code")
+    public R sendVerificationCode(@Validated @RequestParam String email) {
+        SendVerificationCodeDTO dto = new SendVerificationCodeDTO();
+        dto.setEmail(email);
         return authService.sendVerificationCode(dto);
     }
 }
