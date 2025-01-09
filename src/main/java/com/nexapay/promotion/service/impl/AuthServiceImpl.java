@@ -19,7 +19,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 @Service
@@ -35,6 +38,8 @@ public class AuthServiceImpl implements AuthService {
     private final RedisTemplate<String, Object> redisTemplate;
     private static final String VERIFICATION_CODE_KEY_PREFIX = "verification_code:";
     private static final long VERIFICATION_CODE_EXPIRE_TIME = 5; // 5分钟过期
+    private static final String TOKEN_KEY_PREFIX = "user_token:";  // 新增token前缀
+    private static final long TOKEN_EXPIRE_TIME = 7;  // token 7天过期
 
     @Override
     public R sendVerificationCode(SendVerificationCodeDTO dto) {
@@ -50,6 +55,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public R register(RegisterDTO registerDTO) {
+        // 验证码检查逻辑保持不变
         String key = VERIFICATION_CODE_KEY_PREFIX + registerDTO.getEmail();
         String storedCode = (String) redisTemplate.opsForValue().get(key);
 
@@ -57,7 +63,7 @@ public class AuthServiceImpl implements AuthService {
             return R.error("验证码无效或已过期");
         }
 
-        // 验证邮箱
+        // 邮箱查重逻辑保持不变
         if (userMapper.selectOne(new LambdaQueryWrapper<User>()
                 .eq(User::getEmail, registerDTO.getEmail())) != null) {
             return R.error("邮箱已被注册");
@@ -72,11 +78,24 @@ public class AuthServiceImpl implements AuthService {
         user.setUpdateTime(LocalDateTime.now());
 
         userMapper.insert(user);
-        redisTemplate.delete(key);
+        redisTemplate.delete(key);  // 删除验证码
 
-        return R.success(jwtUtil.generateToken(user));
+        // 生成token并存储到Redis
+        String token = UUID.randomUUID().toString();
+        String tokenKey = TOKEN_KEY_PREFIX + token;
+        redisTemplate.opsForValue().set(tokenKey, user.getEmail(), TOKEN_EXPIRE_TIME, TimeUnit.DAYS);
+
+        // 返回用户信息和token
+        Map<String, Object> result = new HashMap<>();
+        result.put("token", token);
+        result.put("userInfo", new HashMap<String, Object>() {{
+            put("email", user.getEmail());
+        }});
+
+        return R.success(result);
     }
 
+    // login方法也需要相应修改
     @Override
     public R login(LoginDTO loginDTO) {
         User user = userMapper.selectOne(
@@ -96,10 +115,19 @@ public class AuthServiceImpl implements AuthService {
             return R.error("密码错误");
         }
 
-        // 生成JWT token
-        String token = jwtUtil.generateToken(user);
+        // 生成token并存储到Redis
+        String token = UUID.randomUUID().toString();
+        String tokenKey = TOKEN_KEY_PREFIX + token;
+        redisTemplate.opsForValue().set(tokenKey, user.getEmail(), TOKEN_EXPIRE_TIME, TimeUnit.DAYS);
 
-        return R.success(token);
+        // 返回用户信息和token
+        Map<String, Object> result = new HashMap<>();
+        result.put("token", token);
+        result.put("userInfo", new HashMap<String, Object>() {{
+            put("email", user.getEmail());
+        }});
+
+        return R.success(result);
     }
 
 

@@ -10,7 +10,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping("/user/auth")
 @RequiredArgsConstructor
 public class AuthController {
 
@@ -26,10 +26,8 @@ public class AuthController {
         return authService.login(loginDTO);
     }
 
-    @GetMapping("/send-code")
-    public R sendVerificationCode(@Validated @RequestParam String email) {
-        SendVerificationCodeDTO dto = new SendVerificationCodeDTO();
-        dto.setEmail(email);
+    @PostMapping("/send-code")
+    public R sendVerificationCode(@Validated @RequestBody SendVerificationCodeDTO dto) {
         return authService.sendVerificationCode(dto);
     }
 }

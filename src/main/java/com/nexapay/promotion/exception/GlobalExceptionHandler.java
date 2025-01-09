@@ -12,9 +12,17 @@ import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    // 处理404资源未找到异常
+    @ExceptionHandler(NoResourceFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public R handleNoResourceFoundException(NoResourceFoundException ex) {
+        return R.error(404, "请求的资源不存在");
+    }
 
     // 处理认证相关异常
     @ExceptionHandler({AuthenticationException.class, AccessDeniedException.class})
