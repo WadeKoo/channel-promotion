@@ -6,12 +6,10 @@ import com.nexapay.promotion.dto.LoginDTO;
 import com.nexapay.promotion.dto.RegisterDTO;
 import com.nexapay.promotion.dto.SendVerificationCodeDTO;
 import com.nexapay.promotion.entity.User;
-import com.nexapay.promotion.entity.VerificationCode;
 import com.nexapay.promotion.mapper.UserMapper;
 import com.nexapay.promotion.mapper.VerificationCodeMapper;
 import com.nexapay.promotion.service.AuthService;
 import com.nexapay.promotion.service.EmailService;
-import com.nexapay.promotion.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -32,7 +30,7 @@ public class AuthServiceImpl implements AuthService {
     private final UserMapper userMapper;
     private final VerificationCodeMapper verificationCodeMapper;
     private final PasswordEncoder passwordEncoder;
-    private final JwtUtil jwtUtil;
+
     private final EmailService emailService;
 
     private final RedisTemplate<String, Object> redisTemplate;

@@ -64,4 +64,10 @@ public class GlobalExceptionHandler {
     public R handleAllException(Exception ex) {
         return R.error(500, "服务器内部错误: " + ex.getMessage());
     }
+
+    @ExceptionHandler(BusinessException.class)
+    @ResponseStatus(HttpStatus.OK)
+    public R handleBusinessException(BusinessException ex) {
+        return R.error(ex.getCode(), ex.getMessage());
+    }
 }
