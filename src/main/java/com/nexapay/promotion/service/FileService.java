@@ -1,11 +1,11 @@
 package com.nexapay.promotion.service;
 
-import com.nexapay.promotion.dto.FileInfoDTO;
+import com.nexapay.promotion.common.R;
 import org.springframework.web.multipart.MultipartFile;
 
 public interface FileService {
     /**
-     * 上传文件
+     * 上传文件并返回资源URL
      */
-    FileInfoDTO uploadFile(MultipartFile file);
+    R<String> uploadFile(MultipartFile file);
 }

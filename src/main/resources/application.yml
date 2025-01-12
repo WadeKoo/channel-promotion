@@ -10,6 +10,7 @@ spring:
       port: 6379
       password: 123456
       database: 0
+        # 例如: https://your-bucket.oss-cn-beijing.aliyuncs.com
   mail:
     host: smtp.qq.com
     name: nexapay
@@ -31,3 +32,10 @@ mybatis-plus:
     map-underscore-to-camel-case: true
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
 
+aliyun:
+    oss:
+      endpoint: oss-cn-shanghai.aliyuncs.com           # 例如: http://oss-cn-beijing.aliyuncs.com
+      access-key-id: LTAI5tGNZPgxQyrZcijb8wd6     # 您的AccessKeyId
+      access-key-secret: 0j7Lo6QfA0MBXK0s7wl0DYdWHjszez  # 您的AccessKeySecret
+      bucket-name: qhmall-product        # 您的存储桶名称
+      url-prefix: https://qhmall-product.oss-cn-shanghai.aliyuncs.com

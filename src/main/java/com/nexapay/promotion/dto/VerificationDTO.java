@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 
 @Data
 public class VerificationDTO {
-    private Long id;
+    private String id;
     private String type;
     private String status;
     private PersonalInfoDTO personalInfo;

@@ -14,6 +14,8 @@ public class User {
     private String email;
     private String password;
     private Integer status;
+    private Integer kycStatus;
+    private String inviteCode;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
 }

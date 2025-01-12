@@ -11,6 +11,7 @@ import com.nexapay.promotion.mapper.VerificationCodeMapper;
 import com.nexapay.promotion.service.AuthService;
 import com.nexapay.promotion.service.EmailService;
 import lombok.RequiredArgsConstructor;
+import org.apache.ibatis.jdbc.Null;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -53,7 +54,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public R register(RegisterDTO registerDTO) {
-        // 验证码检查逻辑保持不变
+
         String key = VERIFICATION_CODE_KEY_PREFIX + registerDTO.getEmail();
         String storedCode = (String) redisTemplate.opsForValue().get(key);
 
@@ -72,6 +73,8 @@ public class AuthServiceImpl implements AuthService {
         user.setEmail(registerDTO.getEmail());
         user.setPassword(passwordEncoder.encode(registerDTO.getPassword()));
         user.setStatus(1);
+        user.setKycStatus(0);
+        user.setInviteCode(null);
         user.setCreateTime(LocalDateTime.now());
         user.setUpdateTime(LocalDateTime.now());
 
@@ -88,12 +91,14 @@ public class AuthServiceImpl implements AuthService {
         result.put("token", token);
         result.put("userInfo", new HashMap<String, Object>() {{
             put("email", user.getEmail());
+            put("kycStatus", user.getKycStatus());
+            put("inviteCode", user.getInviteCode());
         }});
 
         return R.success(result);
     }
 
-    // login方法也需要相应修改
+
     @Override
     public R login(LoginDTO loginDTO) {
         User user = userMapper.selectOne(
@@ -123,6 +128,8 @@ public class AuthServiceImpl implements AuthService {
         result.put("token", token);
         result.put("userInfo", new HashMap<String, Object>() {{
             put("email", user.getEmail());
+            put("kycStatus", user.getKycStatus());
+            put("inviteCode", user.getInviteCode());
         }});
 
         return R.success(result);

@@ -15,53 +15,37 @@ public class UserKycVerificationController {
     private final UserKYCVerificationService userKYCVerificationService;
 
     @PostMapping("/init")
-    public R<VerificationDTO> initVerification(@RequestParam String type) {
-        return userKYCVerificationService.initVerification(type);
+    public R<VerificationDTO> initVerification(@RequestBody KycVerificationRequest.Init request) {
+        return userKYCVerificationService.initVerification(request.getType());
     }
 
     @GetMapping("/detail")
-    public R<VerificationDTO> getVerification(@RequestParam Long id) {
-        return userKYCVerificationService.getVerification(id);
+    public R<VerificationDTO> getVerification() {
+        return userKYCVerificationService.getVerification();
     }
 
     @PostMapping("/update-personal")
-    public R<VerificationDTO> updatePersonalInfo(
-            @RequestParam Long id,
-            @Validated @RequestBody PersonalInfoDTO personalInfo) {
-        return userKYCVerificationService.updatePersonalInfo(id, personalInfo);
+    public R<VerificationDTO> updatePersonalInfo(@RequestBody KycVerificationRequest.UpdatePersonal request) {
+        return userKYCVerificationService.updatePersonalInfo(request.getId(), request.getPersonalInfo());
     }
 
     @PostMapping("/update-company")
-    public R<VerificationDTO> updateCompanyInfo(
-            @RequestParam Long id,
-            @Validated @RequestBody CompanyInfoDTO companyInfo) {
-        return userKYCVerificationService.updateCompanyInfo(id, companyInfo);
+    public R<VerificationDTO> updateCompanyInfo(@RequestBody KycVerificationRequest.UpdateCompany request) {
+        return userKYCVerificationService.updateCompanyInfo(request.getId(), request.getCompanyInfo());
     }
 
     @PostMapping("/update-bank")
-    public R<VerificationDTO> updateBankInfo(
-            @RequestParam Long id,
-            @Validated @RequestBody BankInfoDTO bankInfo) {
-        return userKYCVerificationService.updateBankInfo(id, bankInfo);
+    public R<VerificationDTO> updateBankInfo(@RequestBody KycVerificationRequest.UpdateBank request) {
+        return userKYCVerificationService.updateBankInfo(request.getId(), request.getBankInfo());
     }
 
-    @PostMapping("/upload-document")
-    public R<VerificationDTO> uploadDocuments(
-            @RequestParam Long id,
-            @RequestParam("file") MultipartFile file,
-            @RequestParam("type") String documentType) {
-        return userKYCVerificationService.uploadDocument(id, file, documentType);
-    }
-
-    @PostMapping("/submit")
-    public R<VerificationDTO> submit(@RequestParam Long id) {
-        return userKYCVerificationService.submit(id);
+    @PostMapping("/update-document")
+    public R<VerificationDTO> updateDocumentAndSubmit(@RequestBody KycVerificationRequest.UpdateDocument request) {
+        return userKYCVerificationService.updateDocumentAndSubmit(request.getId(), request.getDocuments());
     }
 
     @PostMapping("/update-agreement")
-    public R<VerificationDTO> updateAgreement(
-            @RequestParam Long id,
-            @Validated @RequestBody AgreementInfoDTO agreementInfo) {
-        return userKYCVerificationService.updateAgreement(id, agreementInfo);
+    public R<VerificationDTO> updateAgreement(@RequestBody KycVerificationRequest.UpdateAgreement request) {
+        return userKYCVerificationService.updateAgreement(request.getId(), request.getAgreementInfo());
     }
 }

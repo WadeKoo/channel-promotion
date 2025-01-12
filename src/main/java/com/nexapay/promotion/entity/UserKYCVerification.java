@@ -9,8 +9,8 @@ import java.time.LocalDateTime;
 @Data
 @TableName("verification")
 public class UserKYCVerification {
-    @TableId(type = IdType.AUTO)
-    private Long id;
+    @TableId(type = IdType.INPUT)
+    private String id;
     private Long userId;
     private String type;  // personal/company
     private String status;  // draft/submitted/approved/rejected

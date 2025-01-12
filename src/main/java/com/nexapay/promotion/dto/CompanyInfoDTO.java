@@ -13,7 +13,7 @@ public class CompanyInfoDTO {
     private String companyName;
     @NotNull(message = "联系人姓名不能为空")
     private String contactName;
-    private PhoneDTO contactPhone;
+    private String contactPhone;
     @NotNull(message = "邮箱不能为空")
     private String email;
     private String businessType;

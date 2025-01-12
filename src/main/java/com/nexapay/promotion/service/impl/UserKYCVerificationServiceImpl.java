@@ -14,11 +14,13 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -51,6 +53,7 @@ public class UserKYCVerificationServiceImpl implements UserKYCVerificationServic
 
         // 创建新的认证记录
         UserKYCVerification verification = new UserKYCVerification();
+        verification.setId(UUID.randomUUID().toString()); // 设置UUID作为ID
         verification.setUserId(currentUserId);
         verification.setType(type);
         verification.setStatus(UserKYCVerificationConstants.Status.DRAFT);
@@ -62,17 +65,24 @@ public class UserKYCVerificationServiceImpl implements UserKYCVerificationServic
     }
 
     @Override
-    public R<VerificationDTO> getVerification(Long id) {
-        UserKYCVerification verification = getVerificationById(id);
+    public R<VerificationDTO> getVerification() {
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+
+        LambdaQueryWrapper<UserKYCVerification> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(UserKYCVerification::getUserId, currentUserId);
+
+        UserKYCVerification verification = userKYCVerificationMapper.selectOne(queryWrapper);
+
         if (verification == null) {
-            return R.error("认证记录不存在");
+            verification = new UserKYCVerification();
         }
+
         return R.success(convertToDTO(verification));
     }
 
     @Override
     @Transactional
-    public R<VerificationDTO> updatePersonalInfo(Long id, PersonalInfoDTO personalInfo) {
+    public R<VerificationDTO> updatePersonalInfo(String id, PersonalInfoDTO personalInfo) {
         UserKYCVerification verification = getVerificationForUpdate(id);
         if (verification == null) {
             return R.error("认证记录不存在或无权操作");
@@ -98,7 +108,7 @@ public class UserKYCVerificationServiceImpl implements UserKYCVerificationServic
 
     @Override
     @Transactional
-    public R<VerificationDTO> updateCompanyInfo(Long id, CompanyInfoDTO companyInfo) {
+    public R<VerificationDTO> updateCompanyInfo(String id, CompanyInfoDTO companyInfo) {
         UserKYCVerification verification = getVerificationForUpdate(id);
         if (verification == null) {
             return R.error("认证记录不存在或无权操作");
@@ -122,7 +132,7 @@ public class UserKYCVerificationServiceImpl implements UserKYCVerificationServic
 
     @Override
     @Transactional
-    public R<VerificationDTO> updateBankInfo(Long id, BankInfoDTO bankInfo) {
+    public R<VerificationDTO> updateBankInfo(String id, BankInfoDTO bankInfo) {
         UserKYCVerification verification = getVerificationForUpdate(id);
         if (verification == null) {
             return R.error("认证记录不存在或无权操作");
@@ -142,63 +152,39 @@ public class UserKYCVerificationServiceImpl implements UserKYCVerificationServic
 
     @Override
     @Transactional
-    public R<VerificationDTO> uploadDocument(Long id, MultipartFile file, String documentType) {
+    public R<VerificationDTO> updateDocumentAndSubmit(String id, DocumentsDTO documents) {
         UserKYCVerification verification = getVerificationForUpdate(id);
         if (verification == null) {
             return R.error("认证记录不存在或无权操作");
         }
 
-        // 获取当前文档信息
-        DocumentsDTO currentDocuments = null;
         try {
-            currentDocuments = verification.getDocuments() != null ?
-                    objectMapper.readValue(verification.getDocuments(), DocumentsDTO.class) :
-                    new DocumentsDTO();
-        } catch (JsonProcessingException e) {
-            log.error("Failed to deserialize documents", e);
-            return R.error("处理文档信息失败");
-        }
-
-        // 上传文件
-        FileInfoDTO fileInfo = fileService.uploadFile(file);
-
-        // 根据文档类型更新对应字段
-        switch (documentType) {
-            case "idFront":
-                currentDocuments.setIdFront(fileInfo);
-                break;
-            case "idBack":
-                currentDocuments.setIdBack(fileInfo);
-                break;
-            case "bankStatement":
-                currentDocuments.setBankStatement(fileInfo);
-                break;
-            case "businessLicense":
-                if (!UserKYCVerificationConstants.Type.COMPANY.equals(verification.getType())) {
-                    return R.error("非企业认证不能上传营业执照");
-                }
-                currentDocuments.setBusinessLicense(fileInfo);
-                break;
-            default:
-                return R.error("不支持的文档类型");
-        }
-
-        try {
-            verification.setDocuments(objectMapper.writeValueAsString(currentDocuments));
+            // Update documents
+            verification.setDocuments(objectMapper.writeValueAsString(documents));
         } catch (JsonProcessingException e) {
             log.error("Failed to serialize documents", e);
             return R.error("更新文档信息失败");
         }
 
+        // Validate and submit
+        try {
+            validateRequiredInfo(verification);
+        } catch (BusinessException e) {
+            return R.error(e.getMessage());
+        }
+
+        verification.setStatus(UserKYCVerificationConstants.Status.SUBMITTED);
+        verification.setSubmittedAt(LocalDateTime.now());
         verification.setUpdatedAt(LocalDateTime.now());
+
         userKYCVerificationMapper.updateById(verification);
         return R.success(convertToDTO(verification));
     }
 
     @Override
     @Transactional
-    public R<VerificationDTO> updateAgreement(Long id, AgreementInfoDTO agreementInfo) {
-        UserKYCVerification verification = getVerificationForUpdate(id);
+    public R<VerificationDTO> updateAgreement(String id, AgreementInfoDTO agreementInfo) {
+        UserKYCVerification verification = getVerificationForAgreement(id);
         if (verification == null) {
             return R.error("认证记录不存在或无权操作");
         }
@@ -216,34 +202,13 @@ public class UserKYCVerificationServiceImpl implements UserKYCVerificationServic
         return R.success(convertToDTO(verification));
     }
 
-    @Override
-    @Transactional
-    public R<VerificationDTO> submit(Long id) {
-        UserKYCVerification verification = getVerificationForUpdate(id);
-        if (verification == null) {
-            return R.error("认证记录不存在或无权操作");
-        }
 
-        // 验证必填信息
-        try {
-            validateRequiredInfo(verification);
-        } catch (BusinessException e) {
-            return R.error(e.getMessage());
-        }
 
-        verification.setStatus(UserKYCVerificationConstants.Status.SUBMITTED);
-        verification.setSubmittedAt(LocalDateTime.now());
-        verification.setUpdatedAt(LocalDateTime.now());
-
-        userKYCVerificationMapper.updateById(verification);
-        return R.success(convertToDTO(verification));
-    }
-
-    private UserKYCVerification getVerificationById(Long id) {
+    private UserKYCVerification getVerificationById(String id) {
         return userKYCVerificationMapper.selectById(id);
     }
 
-    private UserKYCVerification getVerificationForUpdate(Long id) {
+    private UserKYCVerification getVerificationForUpdate(String id) {
         UserKYCVerification verification = getVerificationById(id);
         if (verification == null) {
             return null;
@@ -260,6 +225,22 @@ public class UserKYCVerificationServiceImpl implements UserKYCVerificationServic
         }
 
         return verification;
+    }
+
+    private UserKYCVerification getVerificationForAgreement(String id) {
+        // 权限检查
+        UserKYCVerification verification = getVerificationById(id);
+        if (!verification.getUserId().equals(SecurityUtils.getCurrentUserId())) {
+            return null;
+        }
+
+        // 状态检查
+        if (!UserKYCVerificationConstants.Status.APPROVED.equals(verification.getStatus())) {
+            return null;
+        }
+
+        return verification;
+
     }
 
     private void validateRequiredInfo(UserKYCVerification verification) {
@@ -305,15 +286,6 @@ public class UserKYCVerificationServiceImpl implements UserKYCVerificationServic
             );
             validateDocuments(documents, verification.getType());
 
-            // 验证协议信息
-            if (verification.getAgreementInfo() == null) {
-                throw new BusinessException("请签署协议");
-            }
-            AgreementInfoDTO agreementInfo = objectMapper.readValue(
-                    verification.getAgreementInfo(),
-                    AgreementInfoDTO.class
-            );
-            validateAgreementInfo(agreementInfo);
 
         } catch (JsonProcessingException e) {
             log.error("Failed to validate verification info", e);
@@ -385,9 +357,7 @@ public class UserKYCVerificationServiceImpl implements UserKYCVerificationServic
         if (documents.getBankStatement() == null) {
             throw new BusinessException("请上传银行对账单");
         }
-        if (UserKYCVerificationConstants.Type.COMPANY.equals(type) && documents.getBusinessLicense() == null) {
-            throw new BusinessException("请上传营业执照");
-        }
+
     }
 
     private void validateAgreementInfo(AgreementInfoDTO agreementInfo) {

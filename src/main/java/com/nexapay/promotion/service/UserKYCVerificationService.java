@@ -13,35 +13,30 @@ public interface UserKYCVerificationService {
     /**
      * 获取认证申请详情
      */
-    R<VerificationDTO> getVerification(Long id);
+    R<VerificationDTO> getVerification();
 
     /**
      * 更新个人信息
      */
-    R<VerificationDTO> updatePersonalInfo(Long id, PersonalInfoDTO personalInfo);
+    R<VerificationDTO> updatePersonalInfo(String id, PersonalInfoDTO personalInfo);
 
     /**
      * 更新企业信息
      */
-    R<VerificationDTO> updateCompanyInfo(Long id, CompanyInfoDTO companyInfo);
+    R<VerificationDTO> updateCompanyInfo(String id, CompanyInfoDTO companyInfo);
 
     /**
      * 更新银行账户信息
      */
-    R<VerificationDTO> updateBankInfo(Long id, BankInfoDTO bankInfo);
+    R<VerificationDTO> updateBankInfo(String id, BankInfoDTO bankInfo);
 
     /**
-     * 上传认证文件
+     * 更新文件信息并提交认证申请
      */
-    R<VerificationDTO> uploadDocument(Long id, MultipartFile file, String documentType);
+    R<VerificationDTO> updateDocumentAndSubmit(String id, DocumentsDTO documents);
 
     /**
      * 更新协议签署信息
      */
-    R<VerificationDTO> updateAgreement(Long id, AgreementInfoDTO agreementInfo);
-
-    /**
-     * 提交认证申请
-     */
-    R<VerificationDTO> submit(Long id);
+    R<VerificationDTO> updateAgreement(String id, AgreementInfoDTO agreementInfo);
 }

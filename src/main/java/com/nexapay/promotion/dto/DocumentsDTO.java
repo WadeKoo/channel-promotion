@@ -4,8 +4,7 @@ import lombok.Data;
 
 @Data
 public class DocumentsDTO {
-    private FileInfoDTO idFront;
-    private FileInfoDTO idBack;
-    private FileInfoDTO bankStatement;
-    private FileInfoDTO businessLicense;  // 用于企业认证
+    private String idFront;
+    private String idBack;
+    private String bankStatement;
 }

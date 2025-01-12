@@ -22,30 +22,25 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private static final String TOKEN_PREFIX = "Bearer ";
     private static final String HEADER_AUTH = "Authorization";
 
+    // Add a constant for test user ID
+    private static final Long TEST_USER_ID = 10000L;
+
     @Override
     protected void doFilterInternal(
             @NonNull HttpServletRequest request,
             @NonNull HttpServletResponse response,
             @NonNull FilterChain chain) throws ServletException, IOException {
 
-        try {
-            String token = getTokenFromRequest(request);
-            if (StringUtils.hasText(token)) {
-                Long userId = tokenService.validateToken(token);
-                if (userId != null) {
-                    UsernamePasswordAuthenticationToken authentication =
-                            new UsernamePasswordAuthenticationToken(userId, null, null);
-                    authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                    SecurityContextHolder.getContext().setAuthentication(authentication);
-                }
-            }
-        } catch (Exception e) {
-            logger.error("Cannot set user authentication", e);
-        }
+        // For testing: always set a fixed user authentication
+        UsernamePasswordAuthenticationToken authentication =
+                new UsernamePasswordAuthenticationToken(TEST_USER_ID, null, null);
+        authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+        SecurityContextHolder.getContext().setAuthentication(authentication);
 
         chain.doFilter(request, response);
     }
 
+    // This method is now unused but kept for reference
     private String getTokenFromRequest(@NonNull HttpServletRequest request) {
         String bearerToken = request.getHeader(HEADER_AUTH);
         if (StringUtils.hasText(bearerToken) && bearerToken.startsWith(TOKEN_PREFIX)) {
