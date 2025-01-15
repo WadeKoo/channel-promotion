@@ -2,16 +2,17 @@ package com.nexapay.promotion.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.nexapay.promotion.common.R;
-import com.nexapay.promotion.dto.LoginDTO;
-import com.nexapay.promotion.dto.RegisterDTO;
-import com.nexapay.promotion.dto.SendVerificationCodeDTO;
-import com.nexapay.promotion.entity.User;
-import com.nexapay.promotion.mapper.UserMapper;
+import com.nexapay.promotion.common.service.TokenService;
+import com.nexapay.promotion.dto.channel.LoginDTO;
+import com.nexapay.promotion.dto.channel.RegisterDTO;
+import com.nexapay.promotion.dto.channel.SendVerificationCodeDTO;
+import com.nexapay.promotion.entity.ChannelUser;
+
+import com.nexapay.promotion.mapper.ChannelUserMapper;
 import com.nexapay.promotion.mapper.VerificationCodeMapper;
 import com.nexapay.promotion.service.AuthService;
 import com.nexapay.promotion.service.EmailService;
 import lombok.RequiredArgsConstructor;
-import org.apache.ibatis.jdbc.Null;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -21,16 +22,17 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 @Service
 @RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
 
-    private final UserMapper userMapper;
+    private final ChannelUserMapper channelUserMapper;
     private final VerificationCodeMapper verificationCodeMapper;
     private final PasswordEncoder passwordEncoder;
+
+    private final TokenService tokenService;
 
     private final EmailService emailService;
 
@@ -63,36 +65,34 @@ public class AuthServiceImpl implements AuthService {
         }
 
         // 邮箱查重逻辑保持不变
-        if (userMapper.selectOne(new LambdaQueryWrapper<User>()
-                .eq(User::getEmail, registerDTO.getEmail())) != null) {
+        if (channelUserMapper.selectOne(new LambdaQueryWrapper<ChannelUser>()
+                .eq(ChannelUser::getEmail, registerDTO.getEmail())) != null) {
             return R.error("邮箱已被注册");
         }
 
         // 创建用户
-        User user = new User();
-        user.setEmail(registerDTO.getEmail());
-        user.setPassword(passwordEncoder.encode(registerDTO.getPassword()));
-        user.setStatus(1);
-        user.setKycStatus(0);
-        user.setInviteCode(null);
-        user.setCreateTime(LocalDateTime.now());
-        user.setUpdateTime(LocalDateTime.now());
+        ChannelUser channelUser = new ChannelUser();
+        channelUser.setEmail(registerDTO.getEmail());
+        channelUser.setPassword(passwordEncoder.encode(registerDTO.getPassword()));
+        channelUser.setStatus(1);
+        channelUser.setKycStatus(0);
+        channelUser.setInviteCode(null);
+        channelUser.setCreateTime(LocalDateTime.now());
+        channelUser.setUpdateTime(LocalDateTime.now());
 
-        userMapper.insert(user);
+        channelUserMapper.insert(channelUser);
         redisTemplate.delete(key);  // 删除验证码
+        String platform=registerDTO.getPlatform();
 
-        // 生成token并存储到Redis
-        String token = UUID.randomUUID().toString();
-        String tokenKey = TOKEN_KEY_PREFIX + token;
-        redisTemplate.opsForValue().set(tokenKey, user.getEmail(), TOKEN_EXPIRE_TIME, TimeUnit.DAYS);
+        String token = tokenService.createToken(channelUser.getId(),platform);  // 使用用户ID而不是email
 
         // 返回用户信息和token
         Map<String, Object> result = new HashMap<>();
         result.put("token", token);
         result.put("userInfo", new HashMap<String, Object>() {{
-            put("email", user.getEmail());
-            put("kycStatus", user.getKycStatus());
-            put("inviteCode", user.getInviteCode());
+            put("email", channelUser.getEmail());
+            put("kycStatus", channelUser.getKycStatus());
+            put("inviteCode", channelUser.getInviteCode());
         }});
 
         return R.success(result);
@@ -101,35 +101,35 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public R login(LoginDTO loginDTO) {
-        User user = userMapper.selectOne(
-                new LambdaQueryWrapper<User>()
-                        .eq(User::getEmail, loginDTO.getEmail())
+        ChannelUser channelUser = channelUserMapper.selectOne(
+                new LambdaQueryWrapper<ChannelUser>()
+                        .eq(ChannelUser::getEmail, loginDTO.getEmail())
         );
 
-        if (user == null) {
+        if (channelUser == null) {
             return R.error("用户不存在");
         }
 
-        if (user.getStatus() != 1) {
+        if (channelUser.getStatus() != 1) {
             return R.error("账号已被禁用");
         }
 
-        if (!passwordEncoder.matches(loginDTO.getPassword(), user.getPassword())) {
+        if (!passwordEncoder.matches(loginDTO.getPassword(), channelUser.getPassword())) {
             return R.error("密码错误");
         }
 
+        String platform=loginDTO.getPlatform();
+
         // 生成token并存储到Redis
-        String token = UUID.randomUUID().toString();
-        String tokenKey = TOKEN_KEY_PREFIX + token;
-        redisTemplate.opsForValue().set(tokenKey, user.getEmail(), TOKEN_EXPIRE_TIME, TimeUnit.DAYS);
+        String token = tokenService.createToken(channelUser.getId(),platform);  // 使用用户ID而不是email
 
         // 返回用户信息和token
         Map<String, Object> result = new HashMap<>();
         result.put("token", token);
         result.put("userInfo", new HashMap<String, Object>() {{
-            put("email", user.getEmail());
-            put("kycStatus", user.getKycStatus());
-            put("inviteCode", user.getInviteCode());
+            put("email", channelUser.getEmail());
+            put("kycStatus", channelUser.getKycStatus());
+            put("inviteCode", channelUser.getInviteCode());
         }});
 
         return R.success(result);

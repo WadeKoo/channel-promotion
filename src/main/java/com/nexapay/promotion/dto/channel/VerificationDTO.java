@@ -1,8 +1,6 @@
-package com.nexapay.promotion.dto;
-import jakarta.validation.constraints.NotNull;
+package com.nexapay.promotion.dto.channel;
 import lombok.Data;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data

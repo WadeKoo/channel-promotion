@@ -2,10 +2,12 @@ package com.nexapay.promotion.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.nexapay.promotion.common.R;
+import com.nexapay.promotion.dto.channel.*;
 import com.nexapay.promotion.exception.BusinessException;
-import com.nexapay.promotion.dto.*;
 import com.nexapay.promotion.entity.UserKYCVerification;
 import com.nexapay.promotion.mapper.UserKYCVerificationMapper;
+import com.nexapay.promotion.mapper.ChannelUserMapper;
+import com.nexapay.promotion.entity.ChannelUser;
 import com.nexapay.promotion.service.UserKYCVerificationService;
 import com.nexapay.promotion.service.FileService;
 import com.nexapay.promotion.constants.UserKYCVerificationConstants;
@@ -14,12 +16,13 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Random;
 import java.util.UUID;
 
 @Slf4j
@@ -30,6 +33,11 @@ public class UserKYCVerificationServiceImpl implements UserKYCVerificationServic
     private final UserKYCVerificationMapper userKYCVerificationMapper;
     private final ObjectMapper objectMapper;
     private final FileService fileService;
+    private final ChannelUserMapper channelUserMapper;
+
+    private static final String CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    private static final int INVITE_CODE_LENGTH = 10;
+    private static final int MAX_ATTEMPTS = 10;
 
     @Override
     @Transactional
@@ -166,6 +174,7 @@ public class UserKYCVerificationServiceImpl implements UserKYCVerificationServic
             return R.error("更新文档信息失败");
         }
 
+
         // Validate and submit
         try {
             validateRequiredInfo(verification);
@@ -183,7 +192,7 @@ public class UserKYCVerificationServiceImpl implements UserKYCVerificationServic
 
     @Override
     @Transactional
-    public R<VerificationDTO> updateAgreement(String id, AgreementInfoDTO agreementInfo) {
+    public R updateAgreement(String id, AgreementInfoDTO agreementInfo) {
         UserKYCVerification verification = getVerificationForAgreement(id);
         if (verification == null) {
             return R.error("认证记录不存在或无权操作");
@@ -197,11 +206,65 @@ public class UserKYCVerificationServiceImpl implements UserKYCVerificationServic
             return R.error("更新协议信息失败");
         }
 
+        verification.setStatus(UserKYCVerificationConstants.Status.DONE);
         verification.setUpdatedAt(LocalDateTime.now());
         userKYCVerificationMapper.updateById(verification);
-        return R.success(convertToDTO(verification));
+
+        // Update user KYC status and generate invite code if needed
+        ChannelUser user = channelUserMapper.selectById(verification.getUserId());
+        if (user != null) {
+            user.setKycStatus(1);
+
+            // Generate invite code if empty
+            if (user.getInviteCode() == null || user.getInviteCode().trim().isEmpty()) {
+                String inviteCode = generateUniqueInviteCode();
+                if (inviteCode == null) {
+                    log.error("Failed to generate unique invite code after maximum attempts");
+                    return R.error("系统错误，请稍后重试");
+                }
+                user.setInviteCode(inviteCode);
+            }
+
+            user.setUpdateTime(LocalDateTime.now());
+            channelUserMapper.updateById(user);
+
+            Map<String, Object> result = new HashMap<>();
+
+            result.put("userInfo", new HashMap<String, Object>() {{
+                put("email", user.getEmail());
+                put("kycStatus", user.getKycStatus());
+                put("inviteCode", user.getInviteCode());
+            }});
+
+            return R.success(result);
+        } else {
+            return R.error("用户不存在");
+        }
     }
 
+    private String generateUniqueInviteCode() {
+        Random random = new Random();
+        int attempts = 0;
+
+        while (attempts < MAX_ATTEMPTS) {
+            StringBuilder code = new StringBuilder(INVITE_CODE_LENGTH);
+            for (int i = 0; i < INVITE_CODE_LENGTH; i++) {
+                code.append(CHARACTERS.charAt(random.nextInt(CHARACTERS.length())));
+            }
+
+            // Check if code already exists
+            LambdaQueryWrapper<ChannelUser> queryWrapper = new LambdaQueryWrapper<>();
+            queryWrapper.eq(ChannelUser::getInviteCode, code.toString());
+
+            if (channelUserMapper.selectCount(queryWrapper) == 0) {
+                return code.toString();
+            }
+
+            attempts++;
+        }
+
+        return null; // Return null if unable to generate unique code after max attempts
+    }
 
 
     private UserKYCVerification getVerificationById(String id) {
@@ -300,9 +363,7 @@ public class UserKYCVerificationServiceImpl implements UserKYCVerificationServic
         if (personalInfo.getName() == null || personalInfo.getName().trim().isEmpty()) {
             throw new BusinessException("请输入姓名");
         }
-        if (personalInfo.getIdType() == null || personalInfo.getIdType().trim().isEmpty()) {
-            throw new BusinessException("请选择证件类型");
-        }
+
         if (personalInfo.getIdNumber() == null || personalInfo.getIdNumber().trim().isEmpty()) {
             throw new BusinessException("请输入证件号码");
         }

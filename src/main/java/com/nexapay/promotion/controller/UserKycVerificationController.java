@@ -1,12 +1,11 @@
 package com.nexapay.promotion.controller;
 
 import com.nexapay.promotion.common.R;
-import com.nexapay.promotion.dto.*;
+import com.nexapay.promotion.dto.channel.KycVerificationRequest;
+import com.nexapay.promotion.dto.channel.VerificationDTO;
 import com.nexapay.promotion.service.UserKYCVerificationService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/kyc/verification")
@@ -45,7 +44,7 @@ public class UserKycVerificationController {
     }
 
     @PostMapping("/update-agreement")
-    public R<VerificationDTO> updateAgreement(@RequestBody KycVerificationRequest.UpdateAgreement request) {
+    public R updateAgreement(@RequestBody KycVerificationRequest.UpdateAgreement request) {
         return userKYCVerificationService.updateAgreement(request.getId(), request.getAgreementInfo());
     }
 }

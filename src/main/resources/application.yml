@@ -31,6 +31,9 @@ mybatis-plus:
   configuration:
     map-underscore-to-camel-case: true
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+jwt:
+  secret: d6uUmNuE7kYpG5jW8vF3qH9nM2cX4tA5rB1sL7zQ9wK # 至少32个字符的密钥
+  expiration: 86400000 # 24小时的毫秒数
 
 aliyun:
     oss:

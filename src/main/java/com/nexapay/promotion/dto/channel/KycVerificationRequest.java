@@ -1,6 +1,5 @@
-package com.nexapay.promotion.dto;
+package com.nexapay.promotion.dto.channel;
 
-import jakarta.validation.Valid;  // 使用 jakarta.validation
 import lombok.Data;
 
 public class KycVerificationRequest {

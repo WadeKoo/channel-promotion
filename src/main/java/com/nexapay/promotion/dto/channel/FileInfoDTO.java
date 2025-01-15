@@ -1,4 +1,4 @@
-package com.nexapay.promotion.dto;
+package com.nexapay.promotion.dto.channel;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

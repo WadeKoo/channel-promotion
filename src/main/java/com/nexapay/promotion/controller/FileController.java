@@ -1,7 +1,6 @@
 package com.nexapay.promotion.controller;
 
 import com.nexapay.promotion.common.R;
-import com.nexapay.promotion.dto.FileInfoDTO;
 import com.nexapay.promotion.service.FileService;
 
 import lombok.RequiredArgsConstructor;

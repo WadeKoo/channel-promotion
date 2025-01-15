@@ -3,7 +3,7 @@ package com.nexapay.promotion.common.config;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nexapay.promotion.common.R;
 import com.nexapay.promotion.filter.JwtAuthenticationFilter;
-import com.nexapay.promotion.service.TokenService;
+import com.nexapay.promotion.common.service.TokenService;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -31,6 +31,7 @@ public class SecurityConfig {
     private final TokenService tokenService;
     private static final List<String> WHITE_LIST = Arrays.asList(
             "/user/auth/*",          // 认证相关接口
+            "/admin/user/auth/*",         // 认证相关接口
             "/swagger-ui.html",      // Swagger UI
             "/swagger-resources/**",  // Swagger 资源
             "/v3/api-docs/**",       // OpenAPI
@@ -44,6 +45,8 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(WHITE_LIST.toArray(new String[0])).permitAll()
+                        .requestMatchers("/channel/**").hasRole("CHANNEL")
+                        .requestMatchers("/channel-admin/**").hasRole("CHANNEL_ADMIN")
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session
@@ -56,14 +59,14 @@ public class SecurityConfig {
                 .exceptionHandling(exceptions -> exceptions
                         .authenticationEntryPoint((request, response, authException) -> {
                             response.setContentType("application/json;charset=UTF-8");
-                            response.setStatus(HttpServletResponse.SC_OK);  // 200
+                            response.setStatus(HttpServletResponse.SC_OK);
                             PrintWriter writer = response.getWriter();
                             writer.write(new ObjectMapper().writeValueAsString(R.error(40003, "请先登录")));
                             writer.flush();
                         })
                         .accessDeniedHandler((request, response, accessDeniedException) -> {
                             response.setContentType("application/json;charset=UTF-8");
-                            response.setStatus(HttpServletResponse.SC_OK);  // 200
+                            response.setStatus(HttpServletResponse.SC_OK);
                             PrintWriter writer = response.getWriter();
                             writer.write(new ObjectMapper().writeValueAsString(R.error(40004, "无访问权限")));
                             writer.flush();

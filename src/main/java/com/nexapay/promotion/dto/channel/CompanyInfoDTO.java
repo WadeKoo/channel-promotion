@@ -1,4 +1,4 @@
-package com.nexapay.promotion.dto;
+package com.nexapay.promotion.dto.channel;
 
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;

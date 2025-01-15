@@ -1,8 +1,7 @@
 package com.nexapay.promotion.service;
 
 import com.nexapay.promotion.common.R;
-import com.nexapay.promotion.dto.*;
-import org.springframework.web.multipart.MultipartFile;
+import com.nexapay.promotion.dto.channel.*;
 
 public interface UserKYCVerificationService {
     /**
@@ -38,5 +37,5 @@ public interface UserKYCVerificationService {
     /**
      * 更新协议签署信息
      */
-    R<VerificationDTO> updateAgreement(String id, AgreementInfoDTO agreementInfo);
+    R updateAgreement(String id, AgreementInfoDTO agreementInfo);
 }

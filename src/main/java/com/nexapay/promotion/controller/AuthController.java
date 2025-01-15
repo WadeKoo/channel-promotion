@@ -1,9 +1,9 @@
 package com.nexapay.promotion.controller;
 
 import com.nexapay.promotion.common.R;
-import com.nexapay.promotion.dto.LoginDTO;
-import com.nexapay.promotion.dto.RegisterDTO;
-import com.nexapay.promotion.dto.SendVerificationCodeDTO;
+import com.nexapay.promotion.dto.channel.LoginDTO;
+import com.nexapay.promotion.dto.channel.RegisterDTO;
+import com.nexapay.promotion.dto.channel.SendVerificationCodeDTO;
 import com.nexapay.promotion.service.AuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
