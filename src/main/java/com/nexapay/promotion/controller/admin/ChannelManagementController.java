@@ -38,6 +38,11 @@ public class ChannelManagementController {
         return channelManagementService.getChannelList(page, size);
     }
 
+    @PostMapping("/commission/save")
+    public R saveCommissionConfig(@RequestBody @Valid ChannelCommissionConfigRequest request) {
+        return channelManagementService.configCommission(request);
+    }
+
 
 
 

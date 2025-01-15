@@ -196,17 +196,21 @@ public class ChannelManagementServiceImpl implements ChannelManagementService {
 
     @Override
     public R getChannelList(Integer page, Integer size) {
-        // Create pagination object
+        // 参数校验
+        page = (page == null || page < 1) ? 1 : page;
+        size = (size == null || size < 1) ? 10 : size;
+
+        // 创建分页对象
         Page<ChannelUser> pageParam = new Page<>(page, size);
 
-        // Query conditions
+        // 查询条件
         LambdaQueryWrapper<ChannelUser> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.orderByDesc(ChannelUser::getCreateTime);
 
-        // Execute query
+        // 执行查询
         Page<ChannelUser> userPage = channelUserMapper.selectPage(pageParam, queryWrapper);
 
-        // Transform results
+        // 转换结果
         List<ChannelListDTO> dtoList = new ArrayList<>();
         for (ChannelUser user : userPage.getRecords()) {
             ChannelListDTO dto = new ChannelListDTO();
@@ -216,7 +220,7 @@ public class ChannelManagementServiceImpl implements ChannelManagementService {
             dto.setKycStatus(user.getKycStatus());
             dto.setCreateTime(user.getCreateTime());
 
-            // Get commission config
+            // 获取佣金配置
             LambdaQueryWrapper<ChannelCommissionConfig> configWrapper = new LambdaQueryWrapper<>();
             configWrapper.eq(ChannelCommissionConfig::getChannelUserId, user.getId())
                     .eq(ChannelCommissionConfig::getStatus, 1);
@@ -227,7 +231,7 @@ public class ChannelManagementServiceImpl implements ChannelManagementService {
                 dto.setFirstOrderBonus(config.getFirstOrderBonus());
             }
 
-            // Get KYC information
+            // 获取KYC信息
             LambdaQueryWrapper<UserKYCVerification> kycWrapper = new LambdaQueryWrapper<>();
             kycWrapper.eq(UserKYCVerification::getUserId, user.getId())
                     .orderByDesc(UserKYCVerification::getCreatedAt)
@@ -256,9 +260,15 @@ public class ChannelManagementServiceImpl implements ChannelManagementService {
             dtoList.add(dto);
         }
 
+        // 手动计算总记录数
+        Long total = channelUserMapper.selectCount(queryWrapper);
+
+        // 创建返回结果
         Map<String, Object> result = new HashMap<>();
-        result.put("total", userPage.getTotal());
-        result.put("pages", userPage.getPages());
+        result.put("total", total);  // 使用手动查询的总数
+        result.put("pages", (total + size - 1) / size);  // 根据总数计算页数
+        result.put("current", page);
+        result.put("size", size);
         result.put("list", dtoList);
 
         return R.success(result);
