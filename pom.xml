@@ -9,10 +9,10 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.nexapay</groupId>
-    <artifactId>channel-promotion</artifactId>
+    <artifactId>agency-promotion</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>channel-promotion</name>
-    <description>channel-promotion</description>
+    <name>agency-promotion</name>
+    <description>agency-promotion</description>
     <url/>
     <licenses>
         <license/>
