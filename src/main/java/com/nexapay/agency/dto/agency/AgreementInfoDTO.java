@@ -14,4 +14,6 @@ public class AgreementInfoDTO {
     private String signature;
 
     private LocalDateTime signedAt;
+
+    private String agreementUrl;
 }

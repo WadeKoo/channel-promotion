@@ -66,17 +66,39 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     private String getPlatformFromRequest(HttpServletRequest request) {
+        // 1. 优先从请求头获取平台信息
         String platform = request.getHeader(PLATFORM_HEADER);
-        if (!StringUtils.hasText(platform)) {
-            // 根据请求路径判断平台类型
-            String requestPath = request.getRequestURI();
-            if (requestPath.startsWith("/admin/")) {
-                return CHANNEL_ADMIN_PLATFORM;
-            } else {
-                return CHANNEL_PLATFORM;
-            }
+        if (StringUtils.hasText(platform)) {
+            return platform;
         }
-        return platform;
+
+        // 2. 从请求路径判断平台类型
+        String requestPath = request.getRequestURI();
+
+        // 3. 处理公共接口路径
+        if (requestPath.startsWith("/common/")) {
+            // 对于公共接口，从token中获取platform
+            String token = getTokenFromRequest(request);
+            if (StringUtils.hasText(token)) {
+                try {
+                    TokenValidationResult validationResult = tokenService.validateToken(token);
+                    if (validationResult.isValid()) {
+                        return validationResult.getPlatform();
+                    }
+                } catch (Exception ignored) {
+                    // 如果token验证失败，继续使用默认逻辑
+                }
+            }
+            // 如果无法从token获取platform，返回默认平台
+            return CHANNEL_PLATFORM;
+        }
+
+        // 4. 处理其他路径
+        if (requestPath.startsWith("/admin/")) {
+            return CHANNEL_ADMIN_PLATFORM;
+        }
+
+        return CHANNEL_PLATFORM;
     }
 
     private String getTokenFromRequest(@NonNull HttpServletRequest request) {

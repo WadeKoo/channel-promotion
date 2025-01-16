@@ -2,6 +2,7 @@ package com.nexapay.agency.controller.admin;
 
 import com.nexapay.agency.common.R;
 import com.nexapay.agency.dto.admin.AgencyCommissionConfigRequest;
+import com.nexapay.agency.dto.admin.AgencyKycAuditRequest;
 import com.nexapay.agency.service.AgencyManagementService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -41,6 +42,11 @@ public class AgencyManagementController {
     @PostMapping("/commission/save")
     public R saveCommissionConfig(@RequestBody @Valid AgencyCommissionConfigRequest request) {
         return agencyManagementService.configCommission(request);
+    }
+
+    @PostMapping("/kyc/audit")
+    public R auditKyc(@RequestBody @Valid AgencyKycAuditRequest request) {
+        return agencyManagementService.auditKyc(request);
     }
 
 

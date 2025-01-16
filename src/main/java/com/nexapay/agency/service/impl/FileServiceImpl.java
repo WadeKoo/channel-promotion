@@ -26,7 +26,7 @@ public class FileServiceImpl implements FileService {
     private OssProperties ossProperties;
 
     private static final long MAX_FILE_SIZE = 30 * 1024 * 1024; // 30MB
-    private static final String[] ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png", "gif"};
+    private static final String[] ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png", "gif","pdf"};
 
     @Override
     public R<String> uploadFile(MultipartFile file) {

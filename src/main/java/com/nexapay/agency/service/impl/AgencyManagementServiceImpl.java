@@ -6,7 +6,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nexapay.agency.common.R;
 import com.nexapay.agency.dto.admin.AgencyCommissionConfigRequest;
+import com.nexapay.agency.dto.admin.AgencyKycAuditRequest;
 import com.nexapay.agency.dto.admin.AgencyListDTO;
+import com.nexapay.agency.dto.agency.AgreementInfoDTO;
 import com.nexapay.agency.dto.agency.CompanyInfoDTO;
 import com.nexapay.agency.dto.agency.PersonalInfoDTO;
 import com.nexapay.agency.dto.admin.AgencyKycListDTO;
@@ -272,5 +274,38 @@ public class AgencyManagementServiceImpl implements AgencyManagementService {
         result.put("list", dtoList);
 
         return R.success(result);
+    }
+
+    @Transactional
+    public R auditKyc(AgencyKycAuditRequest request) {
+        AgencyKyc kyc = agencyKycMapper.selectById(request.getId());
+        if (kyc == null) {
+            return R.error("KYC application not found");
+        }
+
+        try {
+            if (request.getApproved()) {
+                // Handle approval
+                kyc.setStatus("approved");
+                kyc.setApprovedAt(LocalDateTime.now());
+
+                // Update agreement info
+                AgreementInfoDTO agreementInfo = new AgreementInfoDTO();
+                agreementInfo.setAgreementUrl(request.getAgreementUrl());
+
+                kyc.setAgreementInfo(objectMapper.writeValueAsString(agreementInfo));
+            } else {
+                // Handle rejection
+                kyc.setStatus("rejected");
+                kyc.setRejectReason(request.getRejectReason());
+            }
+
+            kyc.setUpdatedAt(LocalDateTime.now());
+            agencyKycMapper.updateById(kyc);
+
+            return R.success( "KYC audit processed successfully");
+        } catch (Exception e) {
+            return R.error("Failed to process KYC audit: " + e.getMessage());
+        }
     }
 }

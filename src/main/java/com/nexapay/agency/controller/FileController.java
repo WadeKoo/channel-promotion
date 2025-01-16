@@ -5,8 +5,9 @@ import com.nexapay.agency.service.FileService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
+        import org.springframework.web.multipart.MultipartFile;
 
 @Slf4j
 @RestController
@@ -21,4 +22,6 @@ public class FileController {
 
         return fileService.uploadFile(file);
     }
+
+
 }

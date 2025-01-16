@@ -23,7 +23,6 @@ import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
-import static com.sun.org.apache.xalan.internal.xsltc.compiler.util.Util.println;
 
 @Service
 @RequiredArgsConstructor
@@ -46,12 +45,13 @@ public class AuthServiceImpl implements AuthService {
     public R sendVerificationCode(SendVerificationCodeDTO dto) {
         String code = String.format("%06d", new Random().nextInt(1000000));
 
+
         String key = VERIFICATION_CODE_KEY_PREFIX + dto.getEmail();
 
         redisTemplate.opsForValue().set(key, code, VERIFICATION_CODE_EXPIRE_TIME, TimeUnit.MINUTES);
-        emailService.sendVerificationCode(dto.getEmail(), code);
+//        emailService.sendVerificationCode(dto.getEmail(), code);
 
-        return R.success("验证码已发送");
+        return R.success("验证码已发送 code: " + code);
     }
 
     @Override
