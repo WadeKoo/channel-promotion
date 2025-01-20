@@ -48,8 +48,7 @@ public class AgencyManagementServiceImpl implements AgencyManagementService {
 
         // Query conditions - put submitted status first, then order by creation date
         LambdaQueryWrapper<AgencyKyc> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper
-                .last("ORDER BY FIELD(status, 'submitted', 'approved', 'rejected') ASC, created_at DESC");
+        queryWrapper.last("ORDER BY FIELD(status, 'submitted', 'approved', 'rejected') ASC, created_at DESC");
 
         // Execute query
         Page<AgencyKyc> kycPage = agencyKycMapper.selectPage(pageParam, queryWrapper);
@@ -57,36 +56,46 @@ public class AgencyManagementServiceImpl implements AgencyManagementService {
         // Transform results
         List<AgencyKycListDTO> dtoList = new ArrayList<>();
         for (AgencyKyc kyc : kycPage.getRecords()) {
-            AgencyKycListDTO dto = new AgencyKycListDTO();
-            dto.setId(kyc.getId());
-            dto.setType(kyc.getType());
-            dto.setCreatedAt(kyc.getCreatedAt());
-            dto.setStatus(kyc.getStatus());
-
-            // Get user email
-            AgencyUser user = agencyUserMapper.selectById(kyc.getUserId());
-            if (user != null) {
-                dto.setEmail(user.getEmail());
-            }
-
-            // Get name based on type
             try {
-                if ("personal".equals(kyc.getType())) {
+                AgencyKycListDTO dto = new AgencyKycListDTO();
+                dto.setId(kyc.getId());
+                dto.setType(kyc.getType());
+                dto.setCreatedAt(kyc.getCreatedAt());
+                dto.setStatus(kyc.getStatus());
+
+                // Get user email with null check
+                if (kyc.getUserId() != null) {
+                    AgencyUser user = agencyUserMapper.selectById(kyc.getUserId());
+                    if (user != null) {
+                        dto.setEmail(user.getEmail());
+                    }
+                }
+
+                // Get name based on type with null checks
+                if ("personal".equals(kyc.getType()) && kyc.getPersonalInfo() != null) {
                     PersonalInfoDTO personalInfo = objectMapper.readValue(
                             kyc.getPersonalInfo(), PersonalInfoDTO.class);
-                    dto.setName(personalInfo.getName());
-                } else {
+                    if (personalInfo != null && personalInfo.getName() != null) {
+                        dto.setName(personalInfo.getName());
+                    }
+                } else if ("company".equals(kyc.getType()) && kyc.getCompanyInfo() != null) {
                     CompanyInfoDTO companyInfo = objectMapper.readValue(
                             kyc.getCompanyInfo(), CompanyInfoDTO.class);
-                    dto.setName(companyInfo.getCompanyName());
+                    if (companyInfo != null && companyInfo.getCompanyName() != null) {
+                        dto.setName(companyInfo.getCompanyName());
+                    }
                 }
+
+                dtoList.add(dto);
             } catch (JsonProcessingException e) {
-                log.error("Error parsing JSON for kyc {}: {}",
-                        kyc.getId(), e.getMessage());
+                // Log error but continue processing other records
+                log.error("Error parsing JSON for kyc {}: {}", kyc.getId(), e.getMessage());
+                continue;
+            } catch (Exception e) {
+                // Log any other unexpected errors but continue processing
+                log.error("Unexpected error processing kyc {}: {}", kyc.getId(), e.getMessage());
                 continue;
             }
-
-            dtoList.add(dto);
         }
 
         Map<String, Object> result = new HashMap<>();
@@ -198,21 +207,21 @@ public class AgencyManagementServiceImpl implements AgencyManagementService {
 
     @Override
     public R getAgencyList(Integer page, Integer size) {
-        // 参数校验
+        // Parameter validation
         page = (page == null || page < 1) ? 1 : page;
         size = (size == null || size < 1) ? 10 : size;
 
-        // 创建分页对象
+        // Create pagination object
         Page<AgencyUser> pageParam = new Page<>(page, size);
 
-        // 查询条件
+        // Query conditions
         LambdaQueryWrapper<AgencyUser> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.orderByDesc(AgencyUser::getCreateTime);
 
-        // 执行查询
+        // Execute query
         Page<AgencyUser> userPage = agencyUserMapper.selectPage(pageParam, queryWrapper);
 
-        // 转换结果
+        // Transform results
         List<AgencyListDTO> dtoList = new ArrayList<>();
         for (AgencyUser user : userPage.getRecords()) {
             AgencyListDTO dto = new AgencyListDTO();
@@ -222,7 +231,7 @@ public class AgencyManagementServiceImpl implements AgencyManagementService {
             dto.setKycStatus(user.getKycStatus());
             dto.setCreateTime(user.getCreateTime());
 
-            // 获取佣金配置
+            // Get commission configuration
             LambdaQueryWrapper<AgencyCommissionConfig> configWrapper = new LambdaQueryWrapper<>();
             configWrapper.eq(AgencyCommissionConfig::getAgencyUserId, user.getId())
                     .eq(AgencyCommissionConfig::getStatus, 1);
@@ -233,7 +242,7 @@ public class AgencyManagementServiceImpl implements AgencyManagementService {
                 dto.setFirstOrderBonus(config.getFirstOrderBonus());
             }
 
-            // 获取KYC信息
+            // Get KYC information
             LambdaQueryWrapper<AgencyKyc> kycWrapper = new LambdaQueryWrapper<>();
             kycWrapper.eq(AgencyKyc::getUserId, user.getId())
                     .orderByDesc(AgencyKyc::getCreatedAt)
@@ -243,32 +252,39 @@ public class AgencyManagementServiceImpl implements AgencyManagementService {
             if (kyc != null) {
                 dto.setType(kyc.getType());
                 try {
-                    if ("personal".equals(kyc.getType())) {
+                    // Add null checks for JSON content
+                    if ("personal".equals(kyc.getType()) && kyc.getPersonalInfo() != null) {
                         PersonalInfoDTO personalInfo = objectMapper.readValue(
                                 kyc.getPersonalInfo(), PersonalInfoDTO.class);
-                        dto.setName(personalInfo.getName());
-                        dto.setRegion(personalInfo.getCountry());
-                    } else {
+                        if (personalInfo != null) {
+                            dto.setName(personalInfo.getName());
+                            dto.setRegion(personalInfo.getCountry());
+                        }
+                    } else if ("company".equals(kyc.getType()) && kyc.getCompanyInfo() != null) {
                         CompanyInfoDTO companyInfo = objectMapper.readValue(
                                 kyc.getCompanyInfo(), CompanyInfoDTO.class);
-                        dto.setName(companyInfo.getCompanyName());
-                        dto.setRegion(companyInfo.getCountry());
+                        if (companyInfo != null) {
+                            dto.setName(companyInfo.getCompanyName());
+                            dto.setRegion(companyInfo.getCountry());
+                        }
                     }
                 } catch (JsonProcessingException e) {
                     log.error("Error parsing JSON for user {}: {}", user.getId(), e.getMessage());
+                    // Continue processing other users instead of breaking
+                    continue;
                 }
             }
 
             dtoList.add(dto);
         }
 
-        // 手动计算总记录数
+        // Calculate total count
         Long total = agencyUserMapper.selectCount(queryWrapper);
 
-        // 创建返回结果
+        // Create result map
         Map<String, Object> result = new HashMap<>();
-        result.put("total", total);  // 使用手动查询的总数
-        result.put("pages", (total + size - 1) / size);  // 根据总数计算页数
+        result.put("total", total);
+        result.put("pages", (total + size - 1) / size);
         result.put("current", page);
         result.put("size", size);
         result.put("list", dtoList);

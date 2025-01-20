@@ -47,4 +47,6 @@ public class AgencyKycController {
     public R updateAgreement(@RequestBody KycRequest.UpdateAgreement request) {
         return agencyKycService.updateAgreement(request.getId(), request.getAgreementInfo());
     }
+
+
 }

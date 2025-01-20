@@ -30,7 +30,8 @@ public class SecurityConfig {
 
     private final TokenService tokenService;
     private static final List<String> WHITE_LIST = Arrays.asList(
-            "/user/auth/*",          // 认证相关接口
+            "/user/auth/*",
+            "/agency/promotion/**",// 认证相关接口
             "/admin/user/auth/*",         // 认证相关接口
             "/swagger-ui.html",      // Swagger UI
             "/swagger-resources/**",  // Swagger 资源

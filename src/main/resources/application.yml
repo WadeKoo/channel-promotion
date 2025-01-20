@@ -16,7 +16,7 @@ spring:
     name: nexapay
     port: 465
     username: 87090187@qq.com
-    password: vymvyzlwkmjibide
+    password: tmozobmditoibjbi
     properties:
       mail:
         smtp:

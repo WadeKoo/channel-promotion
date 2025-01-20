@@ -44,9 +44,9 @@ public class AdminUserServiceImpl implements AdminUserService {
         String key = VERIFICATION_CODE_KEY_PREFIX + dto.getEmail();
 
         redisTemplate.opsForValue().set(key, code, VERIFICATION_CODE_EXPIRE_TIME, TimeUnit.MINUTES);
-//        emailService.sendVerificationCode(dto.getEmail(), code);
+        emailService.sendVerificationCode(dto.getEmail(), code);
         log.info(code);
-        return R.success("验证码已发送: " + code);
+        return R.success("验证码已发送");
     }
 
     @Override
