@@ -12,6 +12,8 @@ public class AgencyUser {
     @TableId(type = IdType.AUTO)
     private Long id;
     private String email;
+    private String phone;
+    private String name;
     private String password;
     private Integer status;
     private Integer kycStatus;

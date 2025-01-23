@@ -6,7 +6,7 @@ import lombok.Data;
 @Data
 public class PersonalInfoDTO {
     @NotNull(message = "国家不能为空")
-    private String country;
+    private String region;
     @NotNull(message = "姓名不能为空")
     private String name;
     @NotNull(message = "证件类型不能为空")

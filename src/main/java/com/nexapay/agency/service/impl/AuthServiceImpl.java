@@ -44,18 +44,16 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public R sendVerificationCode(SendVerificationCodeDTO dto) {
-        // 根据类型验证邮箱
+        AgencyUser existingUser = agencyUserMapper.selectOne(new LambdaQueryWrapper<AgencyUser>()
+                .eq(AgencyUser::getEmail, dto.getEmail()));
+
         if ("register".equals(dto.getType())) {
-            // 注册时验证邮箱是否已存在
-            if (agencyUserMapper.selectOne(new LambdaQueryWrapper<AgencyUser>()
-                    .eq(AgencyUser::getEmail, dto.getEmail())) != null) {
-                return R.error("邮箱已被注册");
+            if (existingUser != null && existingUser.getStatus() == 1) {
+                return R.error("邮箱已注册并激活");
             }
         } else if ("reset".equals(dto.getType())) {
-            // 重置密码时验证邮箱是否存在
-            if (agencyUserMapper.selectOne(new LambdaQueryWrapper<AgencyUser>()
-                    .eq(AgencyUser::getEmail, dto.getEmail())) == null) {
-                return R.error("邮箱不存在");
+            if (existingUser == null || existingUser.getStatus() == 0) {
+                return R.error("邮箱未注册或未激活");
             }
         }
 
@@ -70,7 +68,6 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public R register(RegisterDTO registerDTO) {
-
         String key = VERIFICATION_CODE_KEY_PREFIX + registerDTO.getEmail();
         String storedCode = (String) redisTemplate.opsForValue().get(key);
 
@@ -78,40 +75,45 @@ public class AuthServiceImpl implements AuthService {
             return R.error("验证码无效或已过期");
         }
 
-        // 邮箱查重逻辑保持不变
-        if (agencyUserMapper.selectOne(new LambdaQueryWrapper<AgencyUser>()
-                .eq(AgencyUser::getEmail, registerDTO.getEmail())) != null) {
-            return R.error("邮箱已被注册");
+        AgencyUser agencyUser = agencyUserMapper.selectOne(new LambdaQueryWrapper<AgencyUser>()
+                .eq(AgencyUser::getEmail, registerDTO.getEmail()));
+
+        if (agencyUser != null && agencyUser.getStatus() == 1) {
+            return R.error("邮箱已注册并激活");
         }
 
-        // 创建用户
-        AgencyUser agencyUser = new AgencyUser();
-        agencyUser.setEmail(registerDTO.getEmail());
+        LocalDateTime now = LocalDateTime.now();
+        final AgencyUser finalAgencyUser;
+        if (agencyUser == null) {
+            agencyUser = new AgencyUser();
+            agencyUser.setEmail(registerDTO.getEmail());
+            agencyUser.setCreateTime(now);
+        }
+
         agencyUser.setPassword(passwordEncoder.encode(registerDTO.getPassword()));
         agencyUser.setStatus(1);
-        agencyUser.setKycStatus(0);
-        agencyUser.setInviteCode(null);
-        agencyUser.setCreateTime(LocalDateTime.now());
-        agencyUser.setUpdateTime(LocalDateTime.now());
+        agencyUser.setUpdateTime(now);
+        finalAgencyUser = agencyUser;
 
-        agencyUserMapper.insert(agencyUser);
-        redisTemplate.delete(key);  // 删除验证码
-        String platform=registerDTO.getPlatform();
+        if (agencyUser.getId() == null) {
+            agencyUserMapper.insert(agencyUser);
+        } else {
+            agencyUserMapper.updateById(agencyUser);
+        }
 
-        String token = tokenService.createToken(agencyUser.getId(),platform);  // 使用用户ID而不是email
+        redisTemplate.delete(key);
+        String token = tokenService.createToken(finalAgencyUser.getId(), registerDTO.getPlatform());
 
-        // 返回用户信息和token
         Map<String, Object> result = new HashMap<>();
         result.put("token", token);
         result.put("userInfo", new HashMap<String, Object>() {{
-            put("email", agencyUser.getEmail());
-            put("kycStatus", agencyUser.getKycStatus());
-            put("inviteCode", agencyUser.getInviteCode());
+            put("email", finalAgencyUser.getEmail());
+            put("kycStatus", finalAgencyUser.getKycStatus());
+            put("inviteCode", finalAgencyUser.getInviteCode());
         }});
 
         return R.success(result);
     }
-
 
     @Override
     public R login(LoginDTO loginDTO) {
@@ -125,7 +127,7 @@ public class AuthServiceImpl implements AuthService {
         }
 
         if (agencyUser.getStatus() != 1) {
-            return R.error("账号已被禁用");
+            return R.error("账号已被禁用或未激活");
         }
 
         if (!passwordEncoder.matches(loginDTO.getPassword(), agencyUser.getPassword())) {

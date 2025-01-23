@@ -7,8 +7,8 @@ import java.math.BigDecimal;
 
 @Data
 public class CompanyInfoDTO {
-    @NotNull(message = "国家不能为空")
-    private String country;
+    @NotNull(message = "国家/地区不能为空")
+    private String region;
     @NotNull(message = "公司名称不能为空")
     private String companyName;
     @NotNull(message = "联系人姓名不能为空")

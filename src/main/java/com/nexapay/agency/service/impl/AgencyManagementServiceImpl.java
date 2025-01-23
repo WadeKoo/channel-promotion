@@ -5,13 +5,10 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nexapay.agency.common.R;
-import com.nexapay.agency.dto.admin.AgencyCommissionConfigRequest;
-import com.nexapay.agency.dto.admin.AgencyKycAuditRequest;
-import com.nexapay.agency.dto.admin.AgencyListDTO;
+import com.nexapay.agency.dto.admin.*;
 import com.nexapay.agency.dto.agency.AgreementInfoDTO;
 import com.nexapay.agency.dto.agency.CompanyInfoDTO;
 import com.nexapay.agency.dto.agency.PersonalInfoDTO;
-import com.nexapay.agency.dto.admin.AgencyKycListDTO;
 import com.nexapay.agency.entity.AgencyCommissionConfig;
 import com.nexapay.agency.entity.AgencyUser;
 import com.nexapay.agency.entity.AgencyKyc;
@@ -19,6 +16,7 @@ import com.nexapay.agency.mapper.AgencyCommissionConfigMapper;
 import com.nexapay.agency.mapper.AgencyKycMapper;
 import com.nexapay.agency.mapper.AgencyUserMapper;
 import com.nexapay.agency.service.AgencyManagementService;
+import com.nexapay.agency.service.EmailService;
 import com.nexapay.agency.util.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,10 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Slf4j
 @Service
@@ -37,6 +32,7 @@ import java.util.Map;
 public class AgencyManagementServiceImpl implements AgencyManagementService {
 
     private final AgencyKycMapper agencyKycMapper;
+    private final EmailService emailService;
     private final AgencyCommissionConfigMapper agencyCommissionConfigMapper;
     private final AgencyUserMapper agencyUserMapper;
     private final ObjectMapper objectMapper;
@@ -258,14 +254,14 @@ public class AgencyManagementServiceImpl implements AgencyManagementService {
                                 kyc.getPersonalInfo(), PersonalInfoDTO.class);
                         if (personalInfo != null) {
                             dto.setName(personalInfo.getName());
-                            dto.setRegion(personalInfo.getCountry());
+                            dto.setRegion(personalInfo.getRegion());
                         }
                     } else if ("company".equals(kyc.getType()) && kyc.getCompanyInfo() != null) {
                         CompanyInfoDTO companyInfo = objectMapper.readValue(
                                 kyc.getCompanyInfo(), CompanyInfoDTO.class);
                         if (companyInfo != null) {
                             dto.setName(companyInfo.getCompanyName());
-                            dto.setRegion(companyInfo.getCountry());
+                            dto.setRegion(companyInfo.getRegion());
                         }
                     }
                 } catch (JsonProcessingException e) {
@@ -322,6 +318,80 @@ public class AgencyManagementServiceImpl implements AgencyManagementService {
             return R.success( "KYC audit processed successfully");
         } catch (Exception e) {
             return R.error("Failed to process KYC audit: " + e.getMessage());
+        }
+    }
+
+    private static final String CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    private static final int MAX_ATTEMPTS = 10;
+
+    private String generateUniqueInviteCode(int length) {
+        Random random = new Random();
+        int attempts = 0;
+
+        while (attempts < MAX_ATTEMPTS) {
+            StringBuilder code = new StringBuilder(length);
+            for (int i = 0; i < length; i++) {
+                code.append(CHARACTERS.charAt(random.nextInt(CHARACTERS.length())));
+            }
+
+            LambdaQueryWrapper<AgencyUser> queryWrapper = new LambdaQueryWrapper<>();
+            queryWrapper.eq(AgencyUser::getInviteCode, code.toString());
+
+            if (agencyUserMapper.selectCount(queryWrapper) == 0) {
+                return code.toString();
+            }
+            attempts++;
+        }
+        return null;
+    }
+
+    @Override
+    public R createAgency(CreateAgencyRequest request) {
+        if (agencyUserMapper.selectOne(new LambdaQueryWrapper<AgencyUser>()
+                .eq(AgencyUser::getEmail, request.getEmail())) != null) {
+            return R.error("邮箱已经存在");
+        }
+
+        String inviteCode = generateUniqueInviteCode(10);
+        if (inviteCode == null) {
+            return R.error(" 无法生成唯一邀请码");
+        }
+
+        AgencyUser agencyUser = new AgencyUser();
+        agencyUser.setName(request.getName());
+        agencyUser.setEmail(request.getEmail());
+        agencyUser.setPhone(request.getPhone());
+        agencyUser.setStatus(0);
+        agencyUser.setKycStatus(0);
+        agencyUser.setInviteCode(inviteCode);
+        agencyUser.setCreateTime(LocalDateTime.now());
+        agencyUser.setUpdateTime(LocalDateTime.now());
+
+        agencyUserMapper.insert(agencyUser);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("email", agencyUser.getEmail());
+        result.put("phone", agencyUser.getPhone());
+        result.put("inviteCode", inviteCode);
+
+        return R.success(result);
+    }
+
+    @Override
+    public R sendAgencyEmail(AgencyEmailRequest request) {
+        AgencyUser user = agencyUserMapper.selectOne(new LambdaQueryWrapper<AgencyUser>()
+                .eq(AgencyUser::getEmail, request.getEmail()));
+
+        if (user == null) {
+            return R.error("用户不存在");
+        }
+
+        try {
+            emailService.sendEmail(request.getEmail(), request.getSubject(), request.getContent());
+            return R.success("邮件发送成功");
+        } catch (Exception e) {
+            log.error("发送邮件失败: {}", e.getMessage());
+            return R.error("发送邮件失败：" + e.getMessage());
         }
     }
 }

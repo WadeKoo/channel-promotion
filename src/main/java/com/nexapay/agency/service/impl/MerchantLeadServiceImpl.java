@@ -8,6 +8,8 @@ import com.nexapay.agency.dto.agency.CompanyInfoDTO;
 import com.nexapay.agency.dto.agency.PersonalInfoDTO;
 import com.nexapay.agency.dto.merchant.MerchantLeadDTO;
 import com.nexapay.agency.dto.merchant.MerchantLeadRequest;
+import com.nexapay.agency.dto.merchant.MerchantLeadStats;
+import com.nexapay.agency.dto.merchant.PageResponse;
 import com.nexapay.agency.entity.AgencyKyc;
 import com.nexapay.agency.entity.AgencyUser;
 import com.nexapay.agency.entity.MerchantLead;
@@ -102,37 +104,51 @@ public class MerchantLeadServiceImpl implements MerchantLeadService {
     }
 
     @Override
-    public R<Page<MerchantLeadDTO>> list(Integer page, Integer size) {
-        // 参数校验
+    public R<PageResponse<MerchantLeadDTO>> list(Integer page, Integer size) {
         page = (page == null || page < 1) ? 1 : page;
         size = (size == null || size < 1) ? 10 : size;
 
-        // 创建分页对象
         Page<MerchantLead> pageParam = new Page<>(page, size);
-
-        // 查询条件
         LambdaQueryWrapper<MerchantLead> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.orderByDesc(MerchantLead::getCreateTime);
 
-        // 执行分页查询
         Page<MerchantLead> leadPage = merchantLeadMapper.selectPage(pageParam, queryWrapper);
-
-        // 手动计算总记录数
         Long total = merchantLeadMapper.selectCount(queryWrapper);
 
-        // 创建返回的DTO分页对象
+        // Calculate stats
+        MerchantLeadStats stats = new MerchantLeadStats();
+        stats.setTotalLeads(total);
+
+        // New leads this month
+        LocalDateTime firstDayOfMonth = LocalDateTime.now().withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0);
+        stats.setNewLeadsThisMonth(merchantLeadMapper.selectCount(
+                new LambdaQueryWrapper<MerchantLead>()
+                        .ge(MerchantLead::getCreateTime, firstDayOfMonth)
+        ));
+
+        // In progress leads (status = 1)
+        stats.setInProgressLeads(merchantLeadMapper.selectCount(
+                new LambdaQueryWrapper<MerchantLead>()
+                        .eq(MerchantLead::getStatus, 1)
+        ));
+
+        // Converted leads (status = 2)
+        stats.setConvertedLeads(merchantLeadMapper.selectCount(
+                new LambdaQueryWrapper<MerchantLead>()
+                        .eq(MerchantLead::getStatus, 2)
+        ));
+
+        // Create DTO page
         Page<MerchantLeadDTO> dtoPage = new Page<>();
         dtoPage.setCurrent(page);
         dtoPage.setSize(size);
-        dtoPage.setTotal(total);  // 使用手动查询的总数
-        dtoPage.setPages((total + size - 1) / size);  // 根据总数计算页数
+        dtoPage.setTotal(total);
+        dtoPage.setPages((total + size - 1) / size);
 
-        // 转换数据并设置agency信息
         List<MerchantLeadDTO> dtoList = leadPage.getRecords().stream().map(lead -> {
             MerchantLeadDTO dto = new MerchantLeadDTO();
             BeanUtils.copyProperties(lead, dto);
 
-            // 获取agency KYC信息
             AgencyKyc agencyKyc = agencyKycMapper.selectOne(
                     new LambdaQueryWrapper<AgencyKyc>()
                             .eq(AgencyKyc::getUserId, lead.getAgencyId())
@@ -161,9 +177,8 @@ public class MerchantLeadServiceImpl implements MerchantLeadService {
 
         dtoPage.setRecords(dtoList);
 
-        return R.success(dtoPage);
+        return R.success(new PageResponse<>(dtoPage, stats));
     }
-
     @Override
     public R<MerchantLeadDTO> updateStatus(MerchantLeadRequest.UpdateStatus request) {
         MerchantLead lead = merchantLeadMapper.selectById(request.getId());

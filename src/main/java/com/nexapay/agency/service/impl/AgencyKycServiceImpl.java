@@ -96,14 +96,20 @@ public class AgencyKycServiceImpl implements AgencyKycService {
             return R.error("认证记录不存在或无权操作");
         }
 
-        // 验证类型
         if (!AgencyKycConstants.Type.PERSONAL.equals(kyc.getType())) {
             return R.error("非个人认证不能更新个人信息");
         }
 
-        // 设置个人信息
         try {
             kyc.setPersonalInfo(objectMapper.writeValueAsString(personalInfo));
+
+            // Update user name
+            AgencyUser user = agencyUserMapper.selectById(kyc.getUserId());
+            if (user != null && personalInfo.getName() != null) {
+                user.setName(personalInfo.getName());
+                user.setUpdateTime(LocalDateTime.now());
+                agencyUserMapper.updateById(user);
+            }
         } catch (JsonProcessingException e) {
             log.error("Failed to serialize personal info", e);
             return R.error("更新个人信息失败");
@@ -128,6 +134,14 @@ public class AgencyKycServiceImpl implements AgencyKycService {
 
         try {
             kyc.setCompanyInfo(objectMapper.writeValueAsString(companyInfo));
+
+
+            AgencyUser user = agencyUserMapper.selectById(kyc.getUserId());
+            if (user != null && companyInfo.getCompanyName() != null) {
+                user.setName(companyInfo.getCompanyName());
+                user.setUpdateTime(LocalDateTime.now());
+                agencyUserMapper.updateById(user);
+            }
         } catch (JsonProcessingException e) {
             log.error("Failed to serialize company info", e);
             return R.error("更新企业信息失败");
@@ -357,7 +371,7 @@ public class AgencyKycServiceImpl implements AgencyKycService {
     }
 
     private void validatePersonalInfo(PersonalInfoDTO personalInfo) {
-        if (personalInfo.getCountry() == null || personalInfo.getCountry().trim().isEmpty()) {
+        if (personalInfo.getRegion() == null || personalInfo.getRegion().trim().isEmpty()) {
             throw new BusinessException("请选择国家/地区");
         }
         if (personalInfo.getName() == null || personalInfo.getName().trim().isEmpty()) {
@@ -373,7 +387,7 @@ public class AgencyKycServiceImpl implements AgencyKycService {
     }
 
     private void validateCompanyInfo(CompanyInfoDTO companyInfo) {
-        if (companyInfo.getCountry() == null || companyInfo.getCountry().trim().isEmpty()) {
+        if (companyInfo.getRegion() == null || companyInfo.getRegion().trim().isEmpty()) {
             throw new BusinessException("请选择公司注册地");
         }
         if (companyInfo.getCompanyName() == null || companyInfo.getCompanyName().trim().isEmpty()) {
@@ -391,9 +405,7 @@ public class AgencyKycServiceImpl implements AgencyKycService {
     }
 
     private void validateBankInfo(BankInfoDTO bankInfo) {
-        if (bankInfo.getAccountType() == null || bankInfo.getAccountType().trim().isEmpty()) {
-            throw new BusinessException("请选择账户类型");
-        }
+
         if (bankInfo.getBankName() == null || bankInfo.getBankName().trim().isEmpty()) {
             throw new BusinessException("请输入银行名称");
         }

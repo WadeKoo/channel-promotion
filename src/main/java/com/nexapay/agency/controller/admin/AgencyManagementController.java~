@@ -59,7 +59,7 @@ public class AgencyManagementController {
     @PostMapping("/send-invite-email")
     public R sendAgencyEmail(@RequestBody @Valid AgencyEmailRequest request) {
         return agencyManagementService.sendAgencyEmail(request);
-
+   
     }
 
 
