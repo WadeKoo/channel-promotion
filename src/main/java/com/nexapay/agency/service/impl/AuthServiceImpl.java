@@ -5,6 +5,7 @@ import com.nexapay.agency.common.R;
 import com.nexapay.agency.common.service.TokenService;
 import com.nexapay.agency.dto.agency.LoginDTO;
 import com.nexapay.agency.dto.agency.RegisterDTO;
+import com.nexapay.agency.dto.agency.ResetPasswordDTO;
 import com.nexapay.agency.dto.agency.SendVerificationCodeDTO;
 import com.nexapay.agency.entity.AgencyUser;
 
@@ -43,15 +44,27 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public R sendVerificationCode(SendVerificationCodeDTO dto) {
+        // 根据类型验证邮箱
+        if ("register".equals(dto.getType())) {
+            // 注册时验证邮箱是否已存在
+            if (agencyUserMapper.selectOne(new LambdaQueryWrapper<AgencyUser>()
+                    .eq(AgencyUser::getEmail, dto.getEmail())) != null) {
+                return R.error("邮箱已被注册");
+            }
+        } else if ("reset".equals(dto.getType())) {
+            // 重置密码时验证邮箱是否存在
+            if (agencyUserMapper.selectOne(new LambdaQueryWrapper<AgencyUser>()
+                    .eq(AgencyUser::getEmail, dto.getEmail())) == null) {
+                return R.error("邮箱不存在");
+            }
+        }
+
         String code = String.format("%06d", new Random().nextInt(1000000));
-
-
         String key = VERIFICATION_CODE_KEY_PREFIX + dto.getEmail();
-
         redisTemplate.opsForValue().set(key, code, VERIFICATION_CODE_EXPIRE_TIME, TimeUnit.MINUTES);
         emailService.sendVerificationCode(dto.getEmail(), code);
 
-        return R.success("验证码已发送 ");
+        return R.success("验证码已发送");
     }
 
     @Override
@@ -135,6 +148,53 @@ public class AuthServiceImpl implements AuthService {
 
         return R.success(result);
     }
+
+    @Override
+    public R verifyEmail(String email) {
+        AgencyUser user = agencyUserMapper.selectOne(
+                new LambdaQueryWrapper<AgencyUser>()
+                        .eq(AgencyUser::getEmail, email)
+        );
+
+        if (user == null) {
+            return R.error("邮箱不存在");
+        }
+
+        return R.success("邮箱验证成功");
+    }
+
+    @Override
+    @Transactional
+    public R resetPassword(ResetPasswordDTO dto) {
+        // 验证用户是否存在
+        AgencyUser user = agencyUserMapper.selectOne(
+                new LambdaQueryWrapper<AgencyUser>()
+                        .eq(AgencyUser::getEmail, dto.getEmail())
+        );
+
+        if (user == null) {
+            return R.error("用户不存在");
+        }
+
+        // 验证验证码
+        String key = VERIFICATION_CODE_KEY_PREFIX + dto.getEmail();
+        String storedCode = (String) redisTemplate.opsForValue().get(key);
+
+        if (storedCode == null || !storedCode.equals(dto.getVerificationCode())) {
+            return R.error("验证码无效或已过期");
+        }
+
+        // 更新密码
+        user.setPassword(passwordEncoder.encode(dto.getNewPassword()));
+        user.setUpdateTime(LocalDateTime.now());
+        agencyUserMapper.updateById(user);
+
+        // 删除验证码
+        redisTemplate.delete(key);
+
+        return R.success("密码重置成功");
+    }
+
 
 
 }

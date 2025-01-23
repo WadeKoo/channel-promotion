@@ -3,6 +3,7 @@ package com.nexapay.agency.controller;
 import com.nexapay.agency.common.R;
 import com.nexapay.agency.dto.agency.LoginDTO;
 import com.nexapay.agency.dto.agency.RegisterDTO;
+import com.nexapay.agency.dto.agency.ResetPasswordDTO;
 import com.nexapay.agency.dto.agency.SendVerificationCodeDTO;
 import com.nexapay.agency.service.AuthService;
 import lombok.RequiredArgsConstructor;
@@ -29,5 +30,15 @@ public class AuthController {
     @PostMapping("/send-code")
     public R sendVerificationCode(@Validated @RequestBody SendVerificationCodeDTO dto) {
         return authService.sendVerificationCode(dto);
+    }
+
+    @GetMapping("/verify-email")
+    public R verifyEmail(@RequestParam String email) {
+        return authService.verifyEmail(email);
+    }
+
+    @PostMapping("/reset-password")
+    public R resetPassword(@Validated @RequestBody ResetPasswordDTO dto) {
+        return authService.resetPassword(dto);
     }
 }
