@@ -44,7 +44,7 @@ public class AgencyManagementServiceImpl implements AgencyManagementService {
 
         // Query conditions - put submitted status first, then order by creation date
         LambdaQueryWrapper<AgencyKyc> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.last("ORDER BY FIELD(status, 'submitted', 'approved', 'rejected') ASC, created_at DESC");
+        queryWrapper.last("ORDER BY  created_at DESC");
 
         // Execute query
         Page<AgencyKyc> kycPage = agencyKycMapper.selectPage(pageParam, queryWrapper);
