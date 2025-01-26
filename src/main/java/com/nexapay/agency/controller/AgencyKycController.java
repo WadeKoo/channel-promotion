@@ -1,8 +1,10 @@
 package com.nexapay.agency.controller;
 
 import com.nexapay.agency.common.R;
+import com.nexapay.agency.dto.agency.AgencyInfoDTO;
 import com.nexapay.agency.dto.agency.KycRequest;
 import com.nexapay.agency.dto.agency.KycDTO;
+import com.nexapay.agency.entity.AgencyUser;
 import com.nexapay.agency.service.AgencyKycService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -47,6 +49,12 @@ public class AgencyKycController {
     public R updateAgreement(@RequestBody KycRequest.UpdateAgreement request) {
         return agencyKycService.updateAgreement(request.getId(), request.getAgreementInfo());
     }
+
+    @GetMapping("/user-info")
+    public R<AgencyInfoDTO> getAgencyInfo() {
+        return agencyKycService.getAgencyInfo();
+    }
+
 
 
 }

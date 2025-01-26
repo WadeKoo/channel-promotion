@@ -38,4 +38,7 @@ public interface AgencyKycService {
      * 更新协议签署信息
      */
     R updateAgreement(String id, AgreementInfoDTO agreementInfo);
+
+    R<AgencyInfoDTO> getAgencyInfo();
+
 }

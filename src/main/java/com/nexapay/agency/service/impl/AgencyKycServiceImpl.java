@@ -3,8 +3,10 @@ package com.nexapay.agency.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.nexapay.agency.common.R;
 import com.nexapay.agency.dto.agency.*;
+import com.nexapay.agency.entity.AgencyCommissionConfig;
 import com.nexapay.agency.exception.BusinessException;
 import com.nexapay.agency.entity.AgencyKyc;
+import com.nexapay.agency.mapper.AgencyCommissionConfigMapper;
 import com.nexapay.agency.mapper.AgencyKycMapper;
 import com.nexapay.agency.mapper.AgencyUserMapper;
 import com.nexapay.agency.entity.AgencyUser;
@@ -16,6 +18,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,6 +37,10 @@ public class AgencyKycServiceImpl implements AgencyKycService {
     private final ObjectMapper objectMapper;
     private final FileService fileService;
     private final AgencyUserMapper agencyUserMapper;
+
+
+    private final AgencyCommissionConfigMapper agencyCommissionConfigMapper;
+
 
     private static final String CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
     private static final int INVITE_CODE_LENGTH = 10;
@@ -387,9 +394,7 @@ public class AgencyKycServiceImpl implements AgencyKycService {
     }
 
     private void validateCompanyInfo(CompanyInfoDTO companyInfo) {
-        if (companyInfo.getRegion() == null || companyInfo.getRegion().trim().isEmpty()) {
-            throw new BusinessException("请选择公司注册地");
-        }
+
         if (companyInfo.getCompanyName() == null || companyInfo.getCompanyName().trim().isEmpty()) {
             throw new BusinessException("请输入公司名称");
         }
@@ -501,4 +506,92 @@ public class AgencyKycServiceImpl implements AgencyKycService {
 
         return dto;
     }
+
+    @Override
+    public R<AgencyInfoDTO> getAgencyInfo() {
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        AgencyInfoDTO info = new AgencyInfoDTO();
+
+        // Get user info
+        AgencyUser user = agencyUserMapper.selectById(currentUserId);
+
+
+        user.setPassword(null);
+        info.setUser(user);
+
+
+        // Get KYC info
+        AgencyKyc kyc = userKycMapper.selectOne(
+                new LambdaQueryWrapper<AgencyKyc>()
+                        .eq(AgencyKyc::getUserId, currentUserId)
+                        .orderByDesc(AgencyKyc::getCreatedAt)
+                        .last("LIMIT 1")
+        );
+        info.setKyc(convertToKycDTO(kyc));
+
+        // Get commission config
+        AgencyCommissionConfig commission = agencyCommissionConfigMapper.selectOne(
+                new LambdaQueryWrapper<AgencyCommissionConfig>()
+                        .eq(AgencyCommissionConfig::getAgencyUserId, currentUserId)
+        );
+        info.setCommission(commission);
+
+        return R.success(info);
+    }
+
+    private KycDTO convertToKycDTO(AgencyKyc kyc) {
+        if (kyc == null) {
+            return null;
+        }
+        KycDTO dto = new KycDTO();
+        BeanUtils.copyProperties(kyc, dto);
+
+        try {
+            // Convert personal info
+            if (kyc.getPersonalInfo() != null) {
+                dto.setPersonalInfo(objectMapper.readValue(
+                        kyc.getPersonalInfo(),
+                        PersonalInfoDTO.class
+                ));
+            }
+
+            // Convert company info
+            if (kyc.getCompanyInfo() != null) {
+                dto.setCompanyInfo(objectMapper.readValue(
+                        kyc.getCompanyInfo(),
+                        CompanyInfoDTO.class
+                ));
+            }
+
+            // Convert bank info
+            if (kyc.getBankInfo() != null) {
+                dto.setBankInfo(objectMapper.readValue(
+                        kyc.getBankInfo(),
+                        BankInfoDTO.class
+                ));
+            }
+
+            // Convert documents
+            if (kyc.getDocuments() != null) {
+                dto.setDocuments(objectMapper.readValue(
+                        kyc.getDocuments(),
+                        DocumentsDTO.class
+                ));
+            }
+
+            // Convert agreement info
+            if (kyc.getAgreementInfo() != null) {
+                dto.setAgreementInfo(objectMapper.readValue(
+                        kyc.getAgreementInfo(),
+                        AgreementInfoDTO.class
+                ));
+            }
+        } catch (JsonProcessingException e) {
+            log.error("Failed to deserialize kyc info", e);
+            throw new BusinessException("转换认证信息失败");
+        }
+
+        return dto;
+    }
+
 }

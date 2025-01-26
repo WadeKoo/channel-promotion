@@ -14,7 +14,6 @@ spring:
       port: 6379
       password: 123456
       database: 0
-        # 例如: https://your-bucket.oss-cn-beijing.aliyuncs.com
   mail:
     host: smtp.qq.com
     name: nexapay
@@ -35,14 +34,19 @@ mybatis-plus:
   configuration:
     map-underscore-to-camel-case: true
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
 jwt:
-  secret: d6uUmNuE7kYpG5jW8vF3qH9nM2cX4tA5rB1sL7zQ9wK # 至少32个字符的密钥
-  expiration: 86400000 # 24小时的毫秒数
+  secret: d6uUmNuE7kYpG5jW8vF3qH9nM2cX4tA5rB1sL7zQ9wK
+  expiration: 86400000
 
 aliyun:
-    oss:
-      endpoint: oss-cn-shanghai.aliyuncs.com           # 例如: http://oss-cn-beijing.aliyuncs.com
-      access-key-id: LTAI5tGNZPgxQyrZcijb8wd6     # 您的AccessKeyId
-      access-key-secret: 0j7Lo6QfA0MBXK0s7wl0DYdWHjszez  # 您的AccessKeySecret
-      bucket-name: qhmall-product        # 您的存储桶名称
-      url-prefix: https://qhmall-product.oss-cn-shanghai.aliyuncs.com
+  oss:
+    endpoint: oss-cn-shanghai.aliyuncs.com
+    access-key-id: LTAI5tGNZPgxQyrZcijb8wd6
+    access-key-secret: 0j7Lo6QfA0MBXK0s7wl0DYdWHjszez
+    bucket-name: qhmall-product
+    url-prefix: https://qhmall-product.oss-cn-shanghai.aliyuncs.com
+
+nexapay:
+  api:
+    base-url: http://118.31.222.186

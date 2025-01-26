@@ -9,15 +9,17 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data
-@TableName("agency_first_order_bonus_record")
-public class AgencyFirstOrderBonusRecord {
+@TableName("agency_merchant_transactions")
+public class AgencyMerchantTransaction {
     @TableId(type = IdType.AUTO)
     private Long id;
-    private Long agencyUserId;
-    private Long merchantId;
-    private String orderNo;
-    private BigDecimal bonusAmount;
+    private Long agencyId;
+    private String merchantId;
+    private String transactionId;
+    private BigDecimal amount;
+    private String currency;
     private Integer status;
+    private LocalDateTime transactionTime;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
 }

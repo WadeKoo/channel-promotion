@@ -20,6 +20,7 @@ public class R<T> {
         return success(null);
     }
 
+
     public static <T> R<T> error(Integer code, String message) {
         R<T> r = new R<>();
         r.setCode(code);
