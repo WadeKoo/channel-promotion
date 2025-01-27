@@ -13,6 +13,7 @@ public class MerchantLead {
     private Long id;
     private Long agencyId;
     private String inviteCode;
+    private String salesName;
     private String email;
     private String phone;
     private String wechat;

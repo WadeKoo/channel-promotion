@@ -122,6 +122,11 @@ public class AgencyKycServiceImpl implements AgencyKycService {
             return R.error("更新个人信息失败");
         }
 
+        // 如果当前状态是rejected，更新为draft
+        if (AgencyKycConstants.Status.REJECTED.equals(kyc.getStatus())) {
+            kyc.setStatus(AgencyKycConstants.Status.DRAFT);
+        }
+
         kyc.setUpdatedAt(LocalDateTime.now());
         userKycMapper.updateById(kyc);
         return R.success(convertToDTO(kyc));
@@ -142,7 +147,6 @@ public class AgencyKycServiceImpl implements AgencyKycService {
         try {
             kyc.setCompanyInfo(objectMapper.writeValueAsString(companyInfo));
 
-
             AgencyUser user = agencyUserMapper.selectById(kyc.getUserId());
             if (user != null && companyInfo.getCompanyName() != null) {
                 user.setName(companyInfo.getCompanyName());
@@ -154,10 +158,16 @@ public class AgencyKycServiceImpl implements AgencyKycService {
             return R.error("更新企业信息失败");
         }
 
+        // 如果当前状态是rejected，更新为draft
+        if (AgencyKycConstants.Status.REJECTED.equals(kyc.getStatus())) {
+            kyc.setStatus(AgencyKycConstants.Status.DRAFT);
+        }
+
         kyc.setUpdatedAt(LocalDateTime.now());
         userKycMapper.updateById(kyc);
         return R.success(convertToDTO(kyc));
     }
+
 
     @Override
     @Transactional
@@ -172,6 +182,11 @@ public class AgencyKycServiceImpl implements AgencyKycService {
         } catch (JsonProcessingException e) {
             log.error("Failed to serialize bank info", e);
             return R.error("更新银行账户信息失败");
+        }
+
+        // 如果当前状态是rejected，更新为draft
+        if (AgencyKycConstants.Status.REJECTED.equals(kyc.getStatus())) {
+            kyc.setStatus(AgencyKycConstants.Status.DRAFT);
         }
 
         kyc.setUpdatedAt(LocalDateTime.now());
@@ -195,12 +210,16 @@ public class AgencyKycServiceImpl implements AgencyKycService {
             return R.error("更新文档信息失败");
         }
 
-
         // Validate and submit
         try {
             validateRequiredInfo(kyc);
         } catch (BusinessException e) {
             return R.error(e.getMessage());
+        }
+
+        // 如果是从rejected状态提交，清除驳回原因
+        if (AgencyKycConstants.Status.REJECTED.equals(kyc.getStatus())) {
+            kyc.setRejectReason(null);
         }
 
         kyc.setStatus(AgencyKycConstants.Status.SUBMITTED);
@@ -303,13 +322,15 @@ public class AgencyKycServiceImpl implements AgencyKycService {
             return null;
         }
 
-        // 状态检查
-        if (!AgencyKycConstants.Status.DRAFT.equals(kyc.getStatus())) {
+        // 状态检查 - 允许draft和rejected状态的记录进行修改
+        if (!AgencyKycConstants.Status.DRAFT.equals(kyc.getStatus())
+                && !AgencyKycConstants.Status.REJECTED.equals(kyc.getStatus())) {
             return null;
         }
 
         return kyc;
     }
+
 
     private AgencyKyc getKycForAgreement(String id) {
         // 权限检查

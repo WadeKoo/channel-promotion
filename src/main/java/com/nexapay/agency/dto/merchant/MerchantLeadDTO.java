@@ -14,6 +14,7 @@ public class MerchantLeadDTO {
     private String wechat;
     private Integer status;
     private String agencyName;
+    private String salesName;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
 }

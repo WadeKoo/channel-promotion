@@ -26,5 +26,12 @@ public class MerchantLeadRequest {
         private Long id;
         private Integer status;
     }
+
+    @Data
+    public static class UpdateSales {
+        private Long id;
+        private String salesName;
+    }
+
 }
 

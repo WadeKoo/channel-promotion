@@ -171,7 +171,7 @@ public class AgencyStatisticsServiceImpl implements AgencyStatisticsService {
             if (trans.getStatus() != 90) continue;
 
             totalCommission = totalCommission.add(
-                    trans.getAmount().multiply(config.getCommissionRate())
+                    trans.getAmount().multiply(config.getCommissionRate().divide(BigDecimal.valueOf(100)))
             );
 
             if (!processedFirstOrders.contains(trans.getMerchantId()) &&
@@ -183,7 +183,6 @@ public class AgencyStatisticsServiceImpl implements AgencyStatisticsService {
 
         return totalCommission;
     }
-
     private BigDecimal calculateConversionRate(Long active, Long total) {
         if (total == null || total == 0) return BigDecimal.ZERO;
         return BigDecimal.valueOf(active)

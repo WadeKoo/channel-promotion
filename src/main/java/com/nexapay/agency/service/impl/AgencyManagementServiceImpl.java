@@ -394,4 +394,27 @@ public class AgencyManagementServiceImpl implements AgencyManagementService {
             return R.error("发送邮件失败：" + e.getMessage());
         }
     }
+
+    @Transactional(rollbackFor = Exception.class)
+    @Override
+    public R updateAgencyStatus(UpdateAgencyStatusRequest request) {
+        AgencyUser user = agencyUserMapper.selectById(request.getAgencyUserId());
+        if (user == null) {
+            return R.error("Agency not found");
+        }
+
+        if (user.getStatus() == 0) {
+            return R.error("Cannot enable/disable inactive agency");
+        }
+
+        if (request.getStatus() != 1 && request.getStatus() != 2) {
+            return R.error("Invalid status value");
+        }
+
+        user.setStatus(request.getStatus());
+        user.setUpdateTime(LocalDateTime.now());
+        agencyUserMapper.updateById(user);
+
+        return R.success("Status updated successfully");
+    }
 }

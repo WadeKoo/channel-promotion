@@ -39,6 +39,10 @@ jwt:
   secret: d6uUmNuE7kYpG5jW8vF3qH9nM2cX4tA5rB1sL7zQ9wK
   expiration: 86400000
 
+nexapay:
+  api:
+    base-url: http://118.31.222.186
+
 aliyun:
   oss:
     endpoint: oss-cn-shanghai.aliyuncs.com
@@ -47,6 +51,3 @@ aliyun:
     bucket-name: qhmall-product
     url-prefix: https://qhmall-product.oss-cn-shanghai.aliyuncs.com
 
-nexapay:
-  api:
-    base-url: http://118.31.222.186

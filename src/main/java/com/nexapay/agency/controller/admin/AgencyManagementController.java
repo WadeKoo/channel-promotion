@@ -1,10 +1,7 @@
 package com.nexapay.agency.controller.admin;
 
 import com.nexapay.agency.common.R;
-import com.nexapay.agency.dto.admin.AgencyCommissionConfigRequest;
-import com.nexapay.agency.dto.admin.AgencyEmailRequest;
-import com.nexapay.agency.dto.admin.AgencyKycAuditRequest;
-import com.nexapay.agency.dto.admin.CreateAgencyRequest;
+import com.nexapay.agency.dto.admin.*;
 import com.nexapay.agency.service.AgencyManagementService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -60,6 +57,10 @@ public class AgencyManagementController {
     public R sendAgencyEmail(@RequestBody @Valid AgencyEmailRequest request) {
         return agencyManagementService.sendAgencyEmail(request);
 
+    }
+    @PostMapping("/status")
+    public R updateAgencyStatus(@RequestBody @Valid UpdateAgencyStatusRequest request) {
+        return agencyManagementService.updateAgencyStatus(request);
     }
 
 

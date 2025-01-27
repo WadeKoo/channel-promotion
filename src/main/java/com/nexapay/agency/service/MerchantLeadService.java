@@ -13,4 +13,6 @@ public interface MerchantLeadService {
     R<MerchantLeadDTO> update(MerchantLeadRequest.Update request);
     R<PageResponse<MerchantLeadDTO>> list(Integer page, Integer size);
     R<MerchantLeadDTO> updateStatus(MerchantLeadRequest.UpdateStatus request);
+    R<MerchantLeadDTO> updateSales(MerchantLeadRequest.UpdateSales request);
+
 }

@@ -69,7 +69,7 @@ public class MerchantLeadServiceImpl implements MerchantLeadService {
                         .eq(MerchantLead::getEmail, request.getEmail())
         );
         if (existingLead != null) {
-            return R.error("Email already registered");
+            return R.error("您已经登记过，请不要重复登记");
         }
 
         // Create new lead
@@ -197,5 +197,19 @@ public class MerchantLeadServiceImpl implements MerchantLeadService {
         MerchantLeadDTO dto = new MerchantLeadDTO();
         BeanUtils.copyProperties(lead, dto);
         return dto;
+    }
+
+    @Override
+    public R<MerchantLeadDTO> updateSales(MerchantLeadRequest.UpdateSales request) {
+        MerchantLead lead = merchantLeadMapper.selectById(request.getId());
+        if (lead == null) {
+            return R.error("Lead not found");
+        }
+
+        lead.setSalesName(request.getSalesName());
+        lead.setUpdateTime(LocalDateTime.now());
+
+        merchantLeadMapper.updateById(lead);
+        return R.success(convertToDTO(lead));
     }
 }

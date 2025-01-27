@@ -23,6 +23,12 @@ public class MerchantManagementController {
         return merchantService.list(page, size);
     }
 
+    @PostMapping("/sales")
+    public R<MerchantLeadDTO> updateSales(@RequestBody MerchantLeadRequest.UpdateSales request) {
+        return merchantService.updateSales(request);
+    }
+
+
     @PostMapping("/status")
     public R<MerchantLeadDTO> updateStatus(@RequestBody MerchantLeadRequest.UpdateStatus request) {
         return merchantService.updateStatus(request);
